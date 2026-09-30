@@ -1,0 +1,3015 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dragonchess — Three realms, one throne</title>
+<style>
+:root{
+  --bg:#0b1020; --bg2:#0f1830; --panel:#142042; --panel2:#0e1a36;
+  --ink:#e8eefc; --ink-dim:#a9b6d6; --ink-faint:#7384a8;
+  --gold-a:#f6d98b; --gold-b:#9a7320; --gold-tok:#f3d27a; --gold-ink:#3a2a05;
+  --scar-a:#e8637a; --scar-b:#7d1430; --scar-tok:#d75b6e; --scar-ink:#2a0610;
+  --sky-l:#cfe0f5; --sky-d:#8fb0d8;
+  --grd-l:#e9d9a6; --grd-d:#9c8a4e;
+  --und-l:#caa0a0; --und-d:#7a4242;
+  --line:#33508a; --line-soft:#223862;
+  --sel:#ffd64a; --legal:#3ad07a; --cap:#ff6b6b; --cross:#5bc0ff; --remote:#c774ff;
+  --last:#f5a623; --frozen:#7fd4ff; --check:#ff3b3b;
+  --inspect:#ffae42; --ilegal:#7fc6a0; --icap:#e09696; --icross:#8fb8d8; --iremote:#b89cd8;
+  --radius:10px; --gap:10px; --pad:12px;
+  --shadow:0 6px 18px rgba(0,0,0,.45);
+  --shadow-sm:0 2px 6px rgba(0,0,0,.35);
+  --motion:.18s;
+}
+@media (prefers-color-scheme: light){
+  :root{ --bg:#eef2fb; --bg2:#e3e9f7; --panel:#ffffff; --panel2:#f3f6fc;
+    --ink:#13203f; --ink-dim:#3a4a72; --ink-faint:#6b7a9c;
+    --line:#9bb0d6; --line-soft:#c4d2ec; --shadow:0 6px 18px rgba(40,60,100,.18);
+    --inspect:#d68a00; --ilegal:#3a8a6a; --icap:#b65a5a; --icross:#5a7ea0; --iremote:#7a5aa0; }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:linear-gradient(180deg,var(--bg),var(--bg2));
+  color:var(--ink);
+  font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  min-height:100vh;
+}
+h1,h2,h3{margin:0 0 .3em;font-weight:650;letter-spacing:.01em}
+button{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:8px;padding:7px 10px}
+button:hover:not(:disabled){background:var(--panel);border-color:var(--sel)}
+button:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
+button:disabled{opacity:.5;cursor:not-allowed}
+input,select{font:inherit;padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink)}
+input:focus-visible{outline:2px solid var(--sel);outline-offset:1px}
+.skip{position:absolute;left:-9999px;top:0;z-index:1000;background:var(--panel);padding:8px 12px;border-radius:8px;border:1px solid var(--line)}
+.skip:focus{left:8px;top:8px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+header.app{
+  position:sticky;top:0;z-index:50;
+  background:linear-gradient(180deg,rgba(11,16,32,.96),rgba(11,16,32,.82));
+  backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--line);
+  padding:8px 16px;
+}
+.head-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;max-width:1700px;margin:0 auto}
+.brand h1{font-size:1.35em;line-height:1}
+.brand .sub{color:var(--ink-dim);font-size:.78em;font-style:italic}
+.head-info{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto;font-size:.86em}
+.badge{padding:3px 9px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);font-weight:600}
+.badge.online{border-color:var(--legal);color:var(--legal)}
+.badge.local{border-color:var(--cross);color:var(--cross)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ink-faint);display:inline-block}
+.dot.on{background:var(--legal)} .dot.off{background:var(--cap)} .dot.wait{background:var(--last)}
+.code-box{display:flex;align-items:center;gap:6px}
+.code-box code{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:2px 7px;letter-spacing:.12em;font-weight:700}
+.iconbtn{padding:5px 8px}
+
+main{max-width:1700px;margin:0 auto;padding:14px}
+.layout{display:grid;grid-template-columns:minmax(0,7fr) minmax(300px,3fr);gap:16px;align-items:start}
+@media (max-width:1000px){ .layout{grid-template-columns:1fr} }
+.col-game{min-width:0}
+.col-rules{position:sticky;top:64px;max-height:calc(100vh - 80px);overflow:auto;padding-right:4px}
+@media (max-width:1000px){ .col-rules{position:static;max-height:none;overflow:visible} }
+
+.panel{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);padding:var(--pad);box-shadow:var(--shadow-sm);margin-bottom:14px}
+.panel h2{font-size:1.05em}
+.panel h3{font-size:.96em}
+
+.boards{display:flex;flex-direction:column;gap:14px}
+.board-wrap{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);padding:10px;box-shadow:var(--shadow-sm);min-width:0}
+.board-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.board-title{font-weight:650;font-size:1em}
+.board-title .lvl{color:var(--ink-dim);font-weight:500}
+.board{--fc:var(--sky-l);--fd:var(--sky-d);--bd:var(--panel2)}
+.board.sky{--fc:#dfeeff;--fd:#9fc2e8;--bd:#13304f}
+.board.grd{--fc:#efe0b0;--fd:#a8975a;--bd:#1c2014}
+.board.und{--fc:#d8aeae;--fd:#7d4a4a;--bd:#250f0f}
+.files{display:grid;grid-template-columns:repeat(12,1fr);color:var(--ink-dim);font-size:.62em;text-align:center;padding:2px 0;user-select:none}
+.ranks{display:grid;grid-template-rows:repeat(8,1fr);color:var(--ink-dim);font-size:.62em;align-items:center;justify-items:center;width:14px;user-select:none}
+.board-mid{display:flex;gap:2px}
+.board-grid{display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:repeat(8,1fr);aspect-ratio:12/8;width:100%;max-width:100%;gap:0;background:var(--bd);border:1px solid var(--line);border-radius:6px;overflow:hidden;min-width:0}
+.sq{
+  position:relative;border:0;padding:0;margin:0;width:100%;aspect-ratio:1/1;
+  background:var(--sq-bg);display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(0,0,0,.18);transition:background var(--motion),box-shadow var(--motion);
+}
+.sq .coord{position:absolute;bottom:1px;right:2px;font-size:.5em;color:rgba(0,0,0,.32);pointer-events:none;font-weight:600;letter-spacing:.02em}
+.sq:hover .coord,.sq:focus-visible .coord{color:rgba(0,0,0,.65)}
+.sq.light{--sq-bg:var(--fc)}
+.sq.dark{--sq-bg:var(--fd)}
+.sq.sel{box-shadow:inset 0 0 0 3px var(--sel);z-index:2}
+.sq.legal::after{content:"";position:absolute;width:32%;height:32%;border-radius:50%;background:var(--legal);opacity:.55;pointer-events:none}
+.sq.cap::after{content:"";position:absolute;inset:0;border:3px solid var(--cap);border-radius:0;pointer-events:none}
+.sq.cross{box-shadow:inset 0 0 0 3px var(--cross);z-index:2}
+.sq.remote{box-shadow:inset 0 0 0 3px var(--remote);z-index:2}
+.sq.remote::after{content:"✕";position:absolute;color:var(--remote);font-size:.8em;font-weight:800;pointer-events:none}
+.sq.last{box-shadow:inset 0 0 0 2px var(--last)}
+.sq.frozen{box-shadow:inset 0 0 0 3px var(--frozen)}
+.sq.check{box-shadow:inset 0 0 0 4px var(--check),0 0 12px var(--check);z-index:3}
+.sq.demo::after{content:"";position:absolute;width:24%;height:24%;border:2px dashed var(--ink-dim);border-radius:50%;pointer-events:none}
+.sq.demo{box-shadow:inset 0 0 0 2px var(--ink-faint)}
+
+.sq.inspect{outline:3px dashed var(--inspect);outline-offset:-3px;z-index:2}
+.sq.ilegal{outline:3px dashed var(--ilegal);outline-offset:-3px}
+.sq.icap{outline:3px dashed var(--icap);outline-offset:-3px;z-index:2}
+.sq.icross{outline:3px dashed var(--icross);outline-offset:-3px;z-index:2}
+.sq.iremote{outline:3px dashed var(--iremote);outline-offset:-3px;z-index:2}
+.sq.iremote::after{content:"✕";position:absolute;color:var(--iremote);font-size:.8em;font-weight:800;pointer-events:none}
+
+.token{position:relative;width:84%;height:84%;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);user-select:none}
+.token.gold{background:radial-gradient(circle at 35% 30%,var(--gold-tok),var(--gold-b));color:var(--gold-ink);border:1.5px solid var(--gold-b)}
+.token.scarlet{background:radial-gradient(circle at 35% 30%,var(--scar-tok),var(--scar-b));color:var(--scar-ink);border:1.5px solid var(--scar-b)}
+.token .emblem{width:42%;height:42%;opacity:.5;position:absolute;top:3px}
+.token .abbr{font-weight:800;font-size:1.05em;line-height:1;text-shadow:0 1px 0 rgba(255,255,255,.25)}
+.token.promoted .abbr{outline:1px dotted currentColor;outline-offset:-1px;border-radius:4px}
+
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.controls .sep{flex:1}
+.status-line{min-height:1.6em;font-weight:600}
+.status-line.check{color:var(--check)}
+.status-line.win{color:var(--legal)}
+
+.rules-card{font-size:.86em}
+.rules-card .pc{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.rules-card .pc .ptok{width:34px;height:34px}
+.rules-search{width:100%;margin-bottom:8px}
+details.group{border:1px solid var(--line-soft);border-radius:8px;margin-bottom:6px;background:var(--panel2)}
+details.group>summary{cursor:pointer;padding:7px 10px;font-weight:650;border-radius:8px}
+details.group>summary:hover{background:var(--panel)}
+details.group[open]>summary{border-bottom:1px solid var(--line-soft)}
+.piece-entry{padding:10px;border-bottom:1px solid var(--line-soft)}
+.piece-entry:last-child{border-bottom:0}
+.piece-entry .ph{display:flex;align-items:center;gap:8px;font-weight:650;cursor:pointer}
+.piece-entry .ph .ptok{width:30px;height:30px;flex:0 0 auto}
+.piece-entry .pname{flex:1}
+.piece-entry .pabbr{font-size:.8em;color:var(--ink-dim);font-weight:600}
+.piece-entry .desc{color:var(--ink-dim);font-size:.9em;margin-top:6px;line-height:1.35}
+.piece-entry .pdiag{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+#pieceGuide.grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;align-items:start}
+#pieceGuide.grid .pdiag-legend{grid-column:1/-1}
+.piece-entry.pcard{padding:0;border:1px solid var(--line-soft);border-radius:8px;background:var(--panel2);overflow:hidden}
+.piece-entry.pcard>summary{list-style:none;cursor:pointer;padding:8px;display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-weight:650}
+.piece-entry.pcard>summary::-webkit-details-marker{display:none}
+.piece-entry.pcard>summary::marker{content:''}
+.piece-entry.pcard .pcard-tok{display:inline-flex}
+.piece-entry.pcard .pcard-tok .ptok{width:26px;height:26px}
+.piece-entry.pcard .pname{flex:1;min-width:0;font-size:.86em}
+.piece-entry.pcard .pabbr{font-size:.72em;color:var(--ink-dim);font-weight:700}
+.piece-entry.pcard .pcard-realm{flex-basis:100%;font-size:.68em;color:var(--ink-dim);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.piece-entry.pcard .pcard-body{padding:0 8px 10px}
+.piece-entry.pcard[open] .pcard-body{padding-top:6px}
+@media (max-width:1000px){ #pieceGuide.grid{grid-template-columns:repeat(3,minmax(0,1fr))} }
+@media (max-width:699px){ #pieceGuide.grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:480px){ #pieceGuide.grid{grid-template-columns:1fr} }
+.pdiag-board{flex:0 0 auto}
+.pdiag-lvl{font-size:.7em;font-weight:700;color:var(--ink-dim);margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em}
+.pdiag-grid{display:grid;grid-template-columns:repeat(9,16px);grid-template-rows:repeat(7,16px);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.pdiag-cross{font-size:.66em;color:var(--cross);margin-top:3px}
+.psq{width:16px;height:16px;position:relative}
+.psq.light{background:var(--grd-l)}
+.psq.dark{background:var(--grd-d)}
+.pdiag-board.lvl3 .psq.light{background:var(--sky-l)}
+.pdiag-board.lvl3 .psq.dark{background:var(--sky-d)}
+.pdiag-board.lvl2 .psq.light{background:var(--grd-l)}
+.pdiag-board.lvl2 .psq.dark{background:var(--grd-d)}
+.pdiag-board.lvl1 .psq.light{background:var(--und-l)}
+.pdiag-board.lvl1 .psq.dark{background:var(--und-d)}
+.psq.mk{position:relative}
+.psq .mk-txt{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:9px;font-weight:800;line-height:1;text-align:center;border-radius:3px;padding:0 1px;min-width:10px}
+.psq.mk-m .mk-txt{color:#1a6f3a}
+.psq.mk-c .mk-txt{color:#9b1d1d}
+.psq.mk-mc .mk-txt{color:#5a3a00}
+.pdiag-note{font-size:.66em;color:var(--ink-dim);margin-top:3px;font-style:italic}
+.pdiag-legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:.7em;color:var(--ink-dim);margin-top:6px}
+.pdiag-legend .lk{display:inline-flex;align-items:center;gap:3px}
+.pdiag-legend .lk .mt{font-weight:800;border:1px solid var(--line);border-radius:3px;padding:0 3px;min-width:14px;text-align:center}
+.pdiag-legend .lk.y .mt{color:#1a6f3a;border-color:#1a6f3a}
+.pdiag-legend .lk.m .mt{color:#1a6f3a}
+.pdiag-legend .lk.c .mt{color:#9b1d1d}
+.pdiag-legend .lk.mc .mt{color:#5a3a00}
+.psq.has-piece{box-shadow:inset 0 0 0 2px var(--sel)}
+.psq .ptok{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:15px;height:15px}
+.psq .ptok .abbr{font-size:7px}
+.psq .ptok .emblem{display:none}
+.legend-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:.82em}
+.legend-grid .li{display:flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:3px;flex:0 0 auto}
+.sw.sel{box-shadow:inset 0 0 0 3px var(--sel)}
+.sw.legal{background:var(--legal)}.sw.cap{background:var(--cap)}
+.sw.cross{box-shadow:inset 0 0 0 3px var(--cross)}
+.sw.remote{box-shadow:inset 0 0 0 3px var(--remote)}
+.sw.last{box-shadow:inset 0 0 0 2px var(--last)}
+.sw.frozen{box-shadow:inset 0 0 0 3px var(--frozen)}
+.sw.check{box-shadow:inset 0 0 0 3px var(--check)}
+.sw.inspect{outline:2px dashed var(--inspect);outline-offset:-2px}
+.sw.ilegal{outline:2px dashed var(--ilegal);outline-offset:-2px}
+.sw.icap{outline:2px dashed var(--icap);outline-offset:-2px}
+.sw.icross{outline:2px dashed var(--icross);outline-offset:-2px}
+.sw.iremote{outline:2px dashed var(--iremote);outline-offset:-2px}
+.view-rules-btn{margin-top:8px;font-size:.84em}
+.history{max-height:220px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82em}
+.history table{width:100%;border-collapse:collapse}
+.history td{padding:2px 5px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+.history .n{color:var(--ink-faint);width:30px}
+.note{font-size:.82em;color:var(--ink-dim)}
+.note ul{margin:.3em 0;padding-left:1.2em}
+
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);padding:18px;max-width:420px;box-shadow:var(--shadow)}
+dialog::backdrop{background:rgba(2,6,20,.6)}
+dialog h2{margin-top:0}
+dialog .row{margin:10px 0}
+dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+
+#profileBtn{font-weight:650;min-width:84px}
+.profile-tabs{display:flex;gap:6px;margin-bottom:12px}
+.profile-tabs button{flex:1}
+.profile-tabs button[aria-selected="true"]{background:var(--sel);color:var(--gold-ink);border-color:var(--sel);font-weight:800}
+.profile-form label{display:block;margin:8px 0 4px;font-weight:600;font-size:.9em}
+.profile-form input{width:100%}
+#profileDialog{max-width:480px;width:min(480px,94vw)}
+.profile-stat{display:flex;flex-direction:column;gap:2px}
+.profile-stat .v{font-size:1.35em;font-weight:800}
+.profile-stat .k{font-size:.72em;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.04em}
+.profile-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:10px;margin:10px 0 14px}
+.profile-wdl{display:flex;gap:10px;flex-wrap:wrap;font-size:.86em;color:var(--ink-dim);margin-bottom:14px}
+.profile-wdl span{padding:2px 8px;border:1px solid var(--line-soft);border-radius:999px}
+.profile-err{color:var(--cap);font-size:.86em;min-height:1.1em;margin:6px 0}
+.profile-err:empty{margin:0}
+.profile-section-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:14px 0 6px}
+.profile-section-h h3{margin:0;font-size:1em}
+.hist-list{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;padding-right:2px}
+.hist-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid var(--line-soft);border-radius:8px;background:var(--panel2);cursor:pointer;text-align:left;width:100%;font:inherit;color:inherit}
+.hist-item:hover:not(:disabled){background:var(--panel);border-color:var(--sel)}
+.hist-item:disabled{opacity:.55;cursor:default}
+.hist-main{display:flex;flex-direction:column;gap:1px;min-width:0}
+.hist-opp{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-meta{font-size:.76em;color:var(--ink-dim)}
+.hist-result{font-weight:700;padding:2px 9px;border-radius:999px;font-size:.82em;border:1px solid var(--line)}
+.hist-result.win{color:var(--legal);border-color:var(--legal)}
+.hist-result.loss{color:var(--cap);border-color:var(--cap)}
+.hist-result.draw{color:var(--ink-dim)}
+.hist-pager{display:flex;gap:8px;justify-content:center;align-items:center;margin-top:10px;font-size:.84em;color:var(--ink-dim)}
+.hist-empty{color:var(--ink-faint);font-size:.88em;padding:14px 0;text-align:center}
+.profile-detail{max-height:62vh;overflow:auto;padding-right:4px}
+.miniboards{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.miniboard{display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:repeat(8,1fr);aspect-ratio:12/8;border:1px solid var(--line-soft);border-radius:6px;overflow:hidden;min-height:120px}
+.miniboard .msq{display:flex;align-items:center;justify-content:center;font-size:.5em}
+.miniboard .msq.light{background:var(--sky-l);color:var(--ink)}
+.miniboard .msq.dark{background:var(--sky-d);color:var(--ink)}
+.miniboard.lvl2 .msq.light{background:var(--grd-l)}
+.miniboard.lvl2 .msq.dark{background:var(--grd-d)}
+.miniboard.lvl1 .msq.light{background:var(--und-l)}
+.miniboard.lvl1 .msq.dark{background:var(--und-d)}
+.miniboard .tok{display:inline-flex;align-items:center;justify-content:center;width:100%;height:100%}
+.miniboard .tok .abbr{font-weight:800;font-size:1.6em}
+.miniboard-label{font-size:.78em;color:var(--ink-dim);font-weight:600;margin-bottom:2px}
+.movelist{max-height:160px;overflow:auto;border:1px solid var(--line-soft);border-radius:8px;padding:6px 8px;margin-top:6px;font-family:ui-monospace,monospace;font-size:.82em}
+.movelist .mv{display:flex;gap:8px;padding:1px 0}
+.movelist .mv .ply{color:var(--ink-faint);width:2ch;text-align:right}
+.profile-scroll{max-height:62vh;overflow:auto;padding-right:4px}
+
+.diag{margin:12px 0;border:1px solid var(--cap);border-radius:8px;background:rgba(255,80,80,.08);padding:10px;font-size:.86em;max-height:240px;overflow:auto}
+.diag.ok{border-color:var(--legal);background:rgba(60,200,120,.08)}
+.test-table{width:100%;font-size:.78em;border-collapse:collapse;font-family:ui-monospace,monospace}
+.test-table td{padding:2px 5px;border-bottom:1px solid var(--line-soft)}
+.test-table .pass{color:var(--legal)}.test-table .fail{color:var(--cap)}
+details.diag-wrap{margin-top:10px}
+#announce{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.hidden{display:none!important}
+
+.board-controls{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 12px;margin-bottom:12px}
+.layer-switch,.layout-toggle{display:flex;gap:6px}
+.layer-btn,.layout-btn{padding:5px 10px;font-size:.84em;font-weight:600}
+.layer-btn[aria-pressed="true"]{background:var(--sel);color:var(--gold-ink);border-color:var(--sel);font-weight:800}
+.layout-btn[aria-pressed="true"]{background:var(--cross);color:#04223a;border-color:var(--cross);font-weight:800}
+.layer-btn.has-cross{box-shadow:0 0 0 2px var(--cross),0 0 9px var(--cross)}
+.board-wrap.has-cross{box-shadow:0 0 0 2px var(--cross),0 0 10px var(--cross)}
+.board-wrap.pulse-cross{animation:pulseCross .7s ease}
+@keyframes pulseCross{0%,100%{box-shadow:0 0 0 0 var(--cross)}40%{box-shadow:0 0 0 4px var(--cross),0 0 16px var(--cross)}}
+@media (prefers-reduced-motion: reduce){ .board-wrap.pulse-cross{animation:none} .board-wrap.pulse-cross{box-shadow:0 0 0 3px var(--cross)} }
+
+.boards.focus-layout{display:grid;grid-template-columns:minmax(0,68fr) minmax(0,32fr);grid-template-rows:auto auto;gap:10px;align-items:start}
+.boards.focus-layout>.board-wrap:nth-child(1){grid-column:1;grid-row:1 / span 2}
+.boards.focus-layout>.board-wrap:nth-child(2){grid-column:2;grid-row:1;min-width:0}
+.boards.focus-layout>.board-wrap:nth-child(3){grid-column:2;grid-row:2;min-width:0}
+.boards.all-layout{display:flex;flex-direction:column;gap:14px}
+
+.board-head-btn{flex:1;text-align:left;background:transparent;border:1px solid transparent;padding:2px 4px;font-weight:650;font-size:1em;border-radius:6px}
+.board-head-btn:hover:not([aria-pressed="true"]){background:var(--panel2);border-color:var(--line)}
+.board-head-btn[aria-pressed="true"]{cursor:default}
+.cross-badge{margin-left:auto;align-self:center;background:var(--cross);color:#04223a;border:0;border-radius:999px;padding:1px 8px;font-size:.7em;font-weight:800;white-space:nowrap;cursor:pointer;font-family:inherit;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.cross-badge:hover{filter:brightness(.94)}
+.cross-badge:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+
+.board-wrap.active-board{padding:10px}
+.board-wrap.preview-board{padding:6px;background:var(--panel2)}
+.board-wrap.preview-board .board-grid{border-radius:5px}
+.board-wrap.preview-board .sq .coord{display:none}
+.board-wrap.preview-board .token{width:74%;height:74%}
+.board-wrap.preview-board .token .emblem{display:none}
+.board-wrap.preview-board .token .abbr{font-size:.8em}
+.board-wrap.preview-board .files,.board-wrap.preview-board .ranks{font-size:.5em}
+.board-wrap.preview-board .board-head{margin-bottom:3px}
+
+.linkbtn{background:none;border:none;color:var(--cross);cursor:pointer;padding:0;font:inherit;text-decoration:underline}
+#authGate{max-width:520px}
+#authGate h2{margin-top:0}
+
+.match-panel{display:flex;align-items:stretch;gap:10px;justify-content:space-between;
+  padding:8px 10px;margin-bottom:8px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.match-panel .mp-side{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding:2px 4px}
+.match-panel .mp-side:nth-child(3){text-align:right}
+.match-panel .mp-mid{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:84px}
+.match-panel .mp-vs{font-weight:800;color:var(--ink-dim);font-size:.9em}
+.match-panel .mp-rated{font-size:.72em;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
+.match-panel .mp-rated.rated{color:var(--check);border-color:var(--check)}
+.match-panel .mp-rated.unranked{color:var(--ink-dim)}
+.match-panel .mp-lastmove{font-size:.78em;color:var(--ink-dim);text-align:center;min-height:1.1em}
+.match-panel .mp-name{font-weight:800}
+.match-panel .mp-name.me{color:var(--cross)}
+.match-panel .mp-rating{font-size:.8em;color:var(--ink-dim)}
+.match-panel .mp-pieces{font-size:.78em;color:var(--ink-dim)}
+.match-panel .mp-conn{font-size:.72em}
+.match-panel .mp-conn.on{color:var(--check)}
+.match-panel .mp-conn.off{color:var(--danger)}
+.match-panel .mp-role{display:inline-block;font-size:.66em;font-weight:800;letter-spacing:.04em;padding:1px 7px;border-radius:999px;text-transform:uppercase;margin-right:4px;vertical-align:middle}
+.match-panel .mp-role.gold{background:rgba(204,153,0,.18);color:#8a6400;border:1px solid rgba(204,153,0,.45)}
+.match-panel .mp-role.scarlet{background:rgba(176,0,0,.15);color:#a30000;border:1px solid rgba(176,0,0,.4)}
+.match-panel .mp-you{font-size:.66em;font-weight:700;color:var(--cross);margin-left:6px;text-transform:uppercase;letter-spacing:.05em}
+.match-panel .mp-record{font-size:.74em;color:var(--ink-dim)}
+.match-panel .mp-turn{font-size:.72em;font-weight:700;color:var(--check);display:flex;align-items:center;gap:3px}
+.match-panel .mp-side{border:2px solid transparent;border-radius:8px;transition:border-color .12s,background .12s}
+.match-panel .mp-side.is-active-turn{background:rgba(40,150,70,.12);border-color:rgba(40,150,70,.55)}
+.match-panel .mp-side .mp-turn-icon{font-size:.95em}
+
+@media (max-width:699px){
+  .match-panel{flex-direction:column;gap:6px}
+  .match-panel .mp-side:nth-child(3){text-align:left}
+  .match-panel .mp-mid{flex-direction:row;gap:8px;min-width:0}
+}
+
+.summary-cards{display:none;gap:10px;margin-top:10px}
+.summary-card{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:8px 12px;flex:1}
+.summary-card .sc-title{font-weight:800}
+.summary-card .sc-info{font-size:.82em;color:var(--ink-dim)}
+.summary-card .sc-info.check{color:var(--check);font-weight:700}
+.summary-card:hover:not(:disabled){border-color:var(--cross)}
+
+@media (max-width:1199px){
+  .boards.focus-layout{display:flex;flex-direction:column;gap:12px}
+  .boards.focus-layout>.board-wrap.preview-board{display:none}
+  #boardsContainer.focus-layout + .summary-cards{display:flex;flex-direction:row}
+}
+@media (max-width:699px){
+  .summary-cards{display:none}
+  .board-controls{padding:6px 8px}
+  .layer-btn,.layout-btn{padding:5px 8px;font-size:.8em}
+  main{padding:8px}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#boards">Skip to boards</a>
+<a class="skip" href="#rules">Skip to rules</a>
+<div id="announce" aria-live="polite" aria-atomic="true"></div>
+<div id="announce-assert" aria-live="assertive" aria-atomic="true"></div>
+
+<header class="app">
+  <div class="head-row">
+    <div class="brand">
+      <h1>Dragonchess</h1>
+      <div class="sub">Three realms. One throne.</div>
+    </div>
+    <div class="head-info">
+      <span id="modeBadge" class="badge online hidden">Online</span>
+      <span class="dot" id="connDot" title="Connection" aria-hidden="true"></span>
+      <span id="connText" class="badge"></span>
+      <span id="codeBox" class="code-box hidden"><span>Room:</span><code id="codeVal"></code><button class="iconbtn" id="copyCode" type="button" aria-label="Copy room code">Copy</button></span>
+      <button class="iconbtn" id="profileBtn" type="button" aria-haspopup="dialog" aria-label="Profile">Sign in</button>
+    </div>
+  </div>
+</header>
+
+<main>
+<div class="layout">
+  <section class="col-game" id="boards" aria-label="Dragonchess boards">
+    <div class="panel" id="authGate">
+      <h2>Sign in to play</h2>
+      <p class="note">Dragonchess is online only. Create an account or sign in to host, join, or find a match.</p>
+      <div class="row"><button id="btnSignInToPlay" type="button">Sign in or register</button></div>
+    </div>
+
+    <div class="panel hidden" id="lobbyPanel">
+      <h2>Start a game</h2>
+      <div id="lobbyActions">
+        <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+          <button id="btnFindMatch" type="button">Find match <span class="note">(rated)</span></button>
+          <button id="btnCancelMatch" type="button" class="hidden">Cancel search</button>
+          <span class="sep"></span>
+          <button id="btnCreate" type="button">Host game <span class="note">(unranked)</span></button>
+          <label>Game code<br><input id="joinCode" maxlength="6" placeholder="ABC234" autocomplete="off"></label>
+          <button id="btnJoin" type="button">Join game</button>
+        </div>
+        <p class="note" id="lobbyMsg" role="status"></p>
+        <div id="matchStatus" class="hidden"><p class="note" id="matchStatusText"></p></div>
+        <div id="hostWait" class="hidden"><p class="note">Waiting for an opponent to join with code <code id="hostCode"></code>… <button id="btnCancelHost" type="button" class="linkbtn">Cancel</button></p></div>
+      </div>
+    </div>
+
+    <div class="panel hidden" id="gamePanel">
+      <div class="match-panel" id="matchPanel" aria-label="Match information">
+        <div class="mp-side" id="mpGold"></div>
+        <div class="mp-mid">
+          <div class="mp-vs">vs</div>
+          <div class="mp-rated" id="mpRated"></div>
+          <div class="mp-lastmove" id="mpLastMove" aria-live="polite"></div>
+        </div>
+        <div class="mp-side" id="mpScarlet"></div>
+      </div>
+      <div class="status-line" id="statusLine"></div>
+      <div class="controls">
+        <button id="btnResign" type="button">Resign</button>
+        <button id="btnDraw" type="button">Offer draw</button>
+        <button id="btnAcceptDraw" type="button" class="hidden">Accept draw</button>
+        <button id="btnDeclineDraw" type="button" class="hidden">Decline draw</button>
+        <button id="btnRematch" type="button" class="hidden">Rematch</button>
+        <button id="btnLeaveGame" type="button" class="hidden">Leave game</button>
+        <span class="sep"></span>
+        <label id="viewLabel" class="note">View: <select id="viewSel"><option value="gold">Gold side</option><option value="scarlet">Scarlet side</option></select></label>
+      </div>
+    </div>
+
+    <div class="panel board-controls" id="boardControls" aria-label="Board view controls">
+      <div class="layer-switch" role="group" aria-label="Layer switcher">
+        <button class="layer-btn" data-level="3" type="button" aria-pressed="false">Sky · Level 3</button>
+        <button class="layer-btn" data-level="2" type="button" aria-pressed="true">Ground · Level 2</button>
+        <button class="layer-btn" data-level="1" type="button" aria-pressed="false">Underworld · Level 1</button>
+      </div>
+      <div class="layout-toggle" role="group" aria-label="Board layout">
+        <button class="layout-btn" data-layout="focus" type="button" aria-pressed="true">Focus view</button>
+        <button class="layout-btn" data-layout="all" type="button" aria-pressed="false">All layers</button>
+      </div>
+    </div>
+
+    <div class="boards" id="boardsContainer"></div>
+    <div class="summary-cards" id="summaryCards" aria-label="Other layers"></div>
+  </section>
+
+  <aside class="col-rules" id="rules" aria-label="Rules and guides">
+    <div class="panel">
+      <h2>How to play</h2>
+      <div class="note">
+        <p><strong>Goal:</strong> Checkmate the enemy King. The King is never captured.</p>
+        <p><strong>Turns:</strong> Gold moves first; play alternates. Each turn is one move or one special remote capture (Dragon).</p>
+        <p><strong>Check:</strong> your King is attacked. <strong>Checkmate:</strong> attacked with no legal reply. <strong>Stalemate:</strong> not attacked but no legal move — a draw (house policy).</p>
+        <p><strong>Coordinates:</strong> notation is <em>level + file + rank</em>, e.g. <code>3c4</code> = level 3, file c, rank 4. Files run a–l (12), ranks 1–8.</p>
+        <p><strong>Three realms:</strong> Level 3 Sky, Level 2 Ground, Level 1 Underworld.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Selected piece</h2>
+      <div id="selectedCard" class="rules-card"><p class="note">Click a piece to see its rules.</p></div>
+      <div class="row" style="margin-top:8px"><button id="btnDemo" type="button" disabled>Show example moves</button></div>
+    </div>
+
+    <div class="panel">
+      <h2>Move highlight legend</h2>
+      <div class="legend-grid" id="legendGrid"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Piece guide</h2>
+      <input class="rules-search" id="pieceSearch" type="search" placeholder="Filter pieces…" aria-label="Filter piece guide">
+      <div id="pieceGuide"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Special rules</h2>
+      <div class="note">
+        <p><strong>Dragon remote capture:</strong> a Dragon on level 3 may, instead of moving, remove one enemy on level 2 at/next to its file-rank. It stays put; remote targets count as attacks for check.</p>
+        <p><strong>Basilisk freeze:</strong> an enemy on level 2 directly above a Basilisk is frozen and cannot move/capture until the Basilisk moves away or is captured.</p>
+        <p><strong>Warrior promotion:</strong> a Warrior reaching the far rank becomes a Hero automatically.</p>
+        <p><strong>No castling, no two-square pawn move, no en passant.</strong></p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Interpretation notes</h2>
+      <div class="note">
+        <ul>
+          <li>Cleric vertical moves may capture.</li>
+          <li>Paladin inter-level moves may capture.</li>
+          <li>Mage one-square orthogonal moves on levels 1 and 3 may capture.</li>
+          <li>King return moves from level 1 or 3 to level 2 may capture.</li>
+          <li>Mage two-level vertical movement does not jump; the level-2 square must be empty.</li>
+          <li>Elemental two-square orthogonal movement does not jump.</li>
+          <li>Elemental movement from level 1 to level 2 is capture-only.</li>
+          <li>Elemental movement from level 2 back to level 1 may move or capture, subject to the empty intermediate square.</li>
+          <li>Stalemate is a draw.</li>
+        </ul>
+        <p>These follow the conservative chess convention that captures are allowed unless expressly forbidden and non-leaping multi-square paths are blocked unless expressly defined as jumps.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Move history</h2>
+      <div class="history" id="historyView"><p class="note">No moves yet.</p></div>
+    </div>
+
+    <details class="diag-wrap" id="diagWrap" hidden>
+      <summary>Diagnostics (?debug=1)</summary>
+      <div class="diag" id="diagBox"></div>
+    </details>
+  </aside>
+</div>
+</main>
+
+<dialog id="confirmDialog">
+  <h2 id="confirmTitle">Confirm</h2>
+  <p id="confirmMsg" class="note"></p>
+  <div class="actions">
+    <button id="confirmNo" type="button">Cancel</button>
+    <button id="confirmYes" type="button">Confirm</button>
+  </div>
+</dialog>
+
+<dialog id="infoDialog">
+  <h2 id="infoTitle">Notice</h2>
+  <p id="infoMsg" class="note"></p>
+  <div class="actions"><button id="infoOk" type="button">OK</button></div>
+</dialog>
+
+<dialog id="profileDialog" aria-labelledby="profileDialogTitle">
+  <h2 id="profileDialogTitle">Profile</h2>
+
+  <div id="profileAuth">
+    <div class="profile-tabs" role="tablist" aria-label="Authentication mode">
+      <button id="tabSignIn" type="button" role="tab" aria-selected="true">Sign in</button>
+      <button id="tabRegister" type="button" role="tab" aria-selected="false">Register</button>
+    </div>
+    <form class="profile-form" id="authForm" autocomplete="on">
+      <label for="authUser">Username</label>
+      <input id="authUser" name="username" type="text" autocomplete="username" maxlength="20" minlength="3" required aria-describedby="profileErr authHelp">
+      <label for="authPass">Password</label>
+      <input id="authPass" name="password" type="password" autocomplete="current-password" maxlength="128" minlength="8" required aria-describedby="profileErr authHelp">
+      <p id="authHelp" class="note">Username 3–20 characters (letters, digits, _ or -). Password 8–128 characters.</p>
+      <p id="profileErr" class="profile-err" role="alert" aria-live="polite"></p>
+      <div class="actions">
+        <button id="authCancel" type="button">Cancel</button>
+        <button id="authSubmit" type="submit">Sign in</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="profileAccount" class="hidden">
+    <div class="profile-scroll">
+      <div id="profileWho" class="profile-section-h"><h3 id="profileName"></h3><button id="logoutBtn" type="button">Sign out</button></div>
+      <div class="profile-stats">
+        <div class="profile-stat"><span class="v" id="profRating">1000</span><span class="k">Elo</span></div>
+        <div class="profile-stat"><span class="v" id="profGames">0</span><span class="k">Games</span></div>
+      </div>
+      <div class="profile-wdl">
+        <span id="profWins">W 0</span><span id="profDraws">D 0</span><span id="profLosses">L 0</span>
+      </div>
+
+      <details class="profile-section">
+        <summary class="profile-section-h"><h3>Change password</h3></summary>
+        <form class="profile-form" id="changePwForm" autocomplete="on">
+          <label for="cpCurrent">Current password</label>
+          <input id="cpCurrent" name="current-password" type="password" autocomplete="current-password" maxlength="128" minlength="8" required aria-describedby="cpErr cpHelp">
+          <label for="cpNew">New password</label>
+          <input id="cpNew" name="new-password" type="password" autocomplete="new-password" maxlength="128" minlength="8" required aria-describedby="cpErr cpHelp">
+          <p id="cpHelp" class="note">8–128 characters. Your session refreshes on success.</p>
+          <p id="cpErr" class="profile-err" role="alert" aria-live="polite"></p>
+          <div class="actions"><button id="cpSubmit" type="submit">Update password</button></div>
+        </form>
+      </details>
+
+      <div class="profile-section-h"><h3>Past games</h3></div>
+      <div id="histList" class="hist-list" role="list"></div>
+      <div id="histPager" class="hist-pager hidden">
+        <button id="histPrev" type="button">‹ Prev</button>
+        <span id="histPageInfo"></span>
+        <button id="histNext" type="button">Next ›</button>
+      </div>
+    </div>
+
+    <div id="profileDetail" class="hidden profile-detail"></div>
+  </div>
+
+  <div class="actions"><button id="profileClose" type="button">Close</button></div>
+</dialog>
+
+<script src="/socket.io/socket.io.js" defer></script>
+<script type="module">
+'use strict';
+const DEBUG = (()=>{ try{ return new URLSearchParams(location.search).get('debug')==='1'; }catch(e){ return false; } })();
+function mark(name){ if(DEBUG && performance && performance.mark) try{ performance.mark(name); }catch(e){} }
+function measure(label, start, end){ if(DEBUG && performance && performance.measure) try{ performance.measure(label, start, end); console.log('[perf] '+label+': '+Math.round(performance.getEntriesByName(label,'measure')[0].duration)+'ms'); }catch(e){} }
+
+const TYPE_ABBR = {sylph:'S',griffon:'G',dragon:'R',warrior:'W',oliphant:'O',unicorn:'U',hero:'H',thief:'T',cleric:'C',mage:'M',king:'K',paladin:'P',dwarf:'D',basilisk:'B',elemental:'E'};
+const ABBR_TYPE = Object.fromEntries(Object.entries(TYPE_ABBR).map(([k,v])=>[v,k]));
+const REALM_OF = {sylph:'sky',griffon:'sky',dragon:'sky',warrior:'ground',oliphant:'ground',unicorn:'ground',hero:'ground',thief:'ground',cleric:'ground',mage:'ground',king:'ground',paladin:'ground',dwarf:'under',basilisk:'under',elemental:'under'};
+const LEVEL_NAME = {3:'Sky',2:'Ground',1:'Underworld'};
+const ALL_LAYER_ORDER = [3,2,1];
+
+const inBounds = (l,f,r)=> l>=1&&l<=3&&f>=0&&f<=11&&r>=0&&r<=7;
+const key = c => c.level+','+c.file+','+c.rank;
+const coordEq = (a,b)=> a.level===b.level&&a.file===b.file&&a.rank===b.rank;
+const fwd = color => color==='gold' ? 1 : -1;
+const opp = c => c==='gold'?'scarlet':'gold';
+const fileChar = f => String.fromCharCode(97+f);
+const rankChar = r => String(r+1);
+function coordToNotation(c){ return c.level + fileChar(c.file) + rankChar(c.rank); }
+function notationToCoord(s){
+  const m = /^([123])([a-l])([1-8])$/.exec((s||'').trim());
+  if(!m) return null;
+  return {level:+m[1],file:m[2].charCodeAt(0)-97,rank:+m[3]-1};
+}
+
+function pieceAt(state,c){
+  for(const id in state.pieces){ const p=state.pieces[id]; if(p.level===c.level&&p.file===c.file&&p.rank===c.rank) return p; }
+  return null;
+}
+function findKing(state,color){
+  for(const id in state.pieces){ const p=state.pieces[id]; if(p.type==='king'&&p.color===color) return p; }
+  return null;
+}
+
+let pieceCounter = {};
+function makeId(color,type){ const base = color+'-'+type; pieceCounter[base] = (pieceCounter[base]||0)+1; return base+'-'+pieceCounter[base]; }
+function place(arr,pieces,color,type){
+  for(const c of arr){
+    const id = makeId(color,type);
+    pieces[id] = {id,color,type,level:c.level,file:c.file,rank:c.rank};
+  }
+}
+function createInitialState(){
+  pieceCounter = {};
+  const pieces = {};
+  const G='gold',S='scarlet';
+  place([{level:3,file:2,rank:0},{level:3,file:10,rank:0}],pieces,G,'griffon');
+  place([{level:3,file:6,rank:0}],pieces,G,'dragon');
+  place([{level:3,file:0,rank:1},{level:3,file:2,rank:1},{level:3,file:4,rank:1},{level:3,file:6,rank:1},{level:3,file:8,rank:1},{level:3,file:10,rank:1}],pieces,G,'sylph');
+  place([{level:3,file:2,rank:7},{level:3,file:10,rank:7}],pieces,S,'griffon');
+  place([{level:3,file:6,rank:7}],pieces,S,'dragon');
+  place([{level:3,file:0,rank:6},{level:3,file:2,rank:6},{level:3,file:4,rank:6},{level:3,file:6,rank:6},{level:3,file:8,rank:6},{level:3,file:10,rank:6}],pieces,S,'sylph');
+  const back = ['oliphant','unicorn','hero','thief','cleric','mage','king','paladin','thief','hero','unicorn','oliphant'];
+  for(let f=0;f<12;f++){
+    const gid=makeId(G,back[f]); pieces[gid]={id:gid,color:G,type:back[f],level:2,file:f,rank:0};
+    const sid=makeId(S,back[f]); pieces[sid]={id:sid,color:S,type:back[f],level:2,file:f,rank:7};
+  }
+  for(let f=0;f<12;f++){
+    const gid=makeId(G,'warrior'); pieces[gid]={id:gid,color:G,type:'warrior',level:2,file:f,rank:1};
+    const sid=makeId(S,'warrior'); pieces[sid]={id:sid,color:S,type:'warrior',level:2,file:f,rank:6};
+  }
+  place([{level:1,file:2,rank:0},{level:1,file:10,rank:0}],pieces,G,'basilisk');
+  place([{level:1,file:6,rank:0}],pieces,G,'elemental');
+  place([{level:1,file:1,rank:1},{level:1,file:3,rank:1},{level:1,file:5,rank:1},{level:1,file:7,rank:1},{level:1,file:9,rank:1},{level:1,file:11,rank:1}],pieces,G,'dwarf');
+  place([{level:1,file:2,rank:7},{level:1,file:10,rank:7}],pieces,S,'basilisk');
+  place([{level:1,file:6,rank:7}],pieces,S,'elemental');
+  place([{level:1,file:1,rank:6},{level:1,file:3,rank:6},{level:1,file:5,rank:6},{level:1,file:7,rank:6},{level:1,file:9,rank:6},{level:1,file:11,rank:6}],pieces,S,'dwarf');
+
+  const counts={gold:0,scarlet:0};
+  for(const id in pieces) counts[pieces[id].color]++;
+  if(counts.gold!==42||counts.scarlet!==42) throw new Error('Bad setup count gold='+counts.gold+' scarlet='+counts.scarlet);
+
+  return {schemaVersion:1,version:0,status:'active',turn:'gold',halfMove:0,pieces,moveHistory:[],drawOfferBy:null,winner:null,resultReason:null};
+}
+
+function generatePseudoMoves(state, pieceId){
+  const piece = state.pieces[pieceId];
+  if(!piece) return [];
+  const moves = [];
+  const from = {level:piece.level,file:piece.file,rank:piece.rank};
+  const f = fwd(piece.color);
+  const promoRank = piece.color==='gold'?7:0;
+  const push = (to, occ, promotion, captureOnly, moveOnly)=>{
+    if(!inBounds(to.level,to.file,to.rank)) return;
+    if(!occ){ if(!captureOnly) moves.push({kind:'move',pieceId:piece.id,from:{...from},to:{...to},capturedPieceId:null,promotion:promotion||null}); }
+    else if(occ.color!==piece.color){ if(!moveOnly) moves.push({kind:'move',pieceId:piece.id,from:{...from},to:{...to},capturedPieceId:occ.id,promotion:promotion||null}); }
+  };
+  const addAny=(to,occ,promo)=>push(to,occ,promo,false,false);
+  const addMove=(to,occ,promo)=>push(to,occ,promo,false,true);
+  const addCap  =(to,occ,promo)=>push(to,occ,promo,true,false);
+  const leapAny=(df,dr,ld)=>addAny({level:piece.level+ld,file:piece.file+df,rank:piece.rank+dr}, pieceAt(state,{level:piece.level+ld,file:piece.file+df,rank:piece.rank+dr}));
+  function rayAny(dirs){
+    for(const [df,dr] of dirs){
+      let nf=piece.file+df, nr=piece.rank+dr;
+      while(inBounds(piece.level,nf,nr)){
+        const occ=pieceAt(state,{level:piece.level,file:nf,rank:nr});
+        addAny({level:piece.level,file:nf,rank:nr},occ);
+        if(occ) break;
+        nf+=df; nr+=dr;
+      }
+    }
+  }
+  const vertAny=(ld)=>addAny({level:piece.level+ld,file:piece.file,rank:piece.rank}, pieceAt(state,{level:piece.level+ld,file:piece.file,rank:piece.rank}));
+
+  switch(piece.type){
+    case 'sylph': {
+      if(piece.level===3){
+        for(const df of [-1,1]) addMove({level:3,file:piece.file+df,rank:piece.rank+f}, pieceAt(state,{level:3,file:piece.file+df,rank:piece.rank+f}));
+        addCap({level:3,file:piece.file,rank:piece.rank+f}, pieceAt(state,{level:3,file:piece.file,rank:piece.rank+f}));
+        addCap({level:2,file:piece.file,rank:piece.rank}, pieceAt(state,{level:2,file:piece.file,rank:piece.rank}));
+      } else if(piece.level===2){
+        addMove({level:3,file:piece.file,rank:piece.rank}, pieceAt(state,{level:3,file:piece.file,rank:piece.rank}));
+        const starts = piece.color==='gold'?[[0,1],[2,1],[4,1],[6,1],[8,1],[10,1]]:[[0,6],[2,6],[4,6],[6,6],[8,6],[10,6]];
+        for(const [sf,sr] of starts) if(sf!==piece.file||sr!==piece.rank) addMove({level:3,file:sf,rank:sr}, pieceAt(state,{level:3,file:sf,rank:sr}));
+      }
+      break;
+    }
+    case 'griffon': {
+      if(piece.level===3){
+        for(const [df,dr] of [[3,2],[3,-2],[-3,2],[-3,-2],[2,3],[2,-3],[-2,3],[-2,-3]]) leapAny(df,dr,0);
+        for(const df of [-1,1]) for(const dr of [-1,1]) leapAny(df,dr,-1);
+      } else if(piece.level===2){
+        for(const df of [-1,1]) for(const dr of [-1,1]) leapAny(df,dr,0);
+        for(const df of [-1,1]) for(const dr of [-1,1]) leapAny(df,dr,1);
+      }
+      break;
+    }
+    case 'dragon': {
+      rayAny([[1,1],[1,-1],[-1,1],[-1,-1]]);
+      for(const [df,dr] of [[1,0],[-1,0],[0,1],[0,-1]]) leapAny(df,dr,0);
+      for(const [df,dr] of [[0,0],[1,0],[-1,0],[0,1],[0,-1]]){
+        const to={level:2,file:piece.file+df,rank:piece.rank+dr};
+        if(!inBounds(to.level,to.file,to.rank)) continue;
+        const occ=pieceAt(state,to);
+        if(occ && occ.color!==piece.color) moves.push({kind:'remoteCapture',pieceId:piece.id,from:{...from},to:{...to},capturedPieceId:occ.id,promotion:null});
+      }
+      break;
+    }
+    case 'warrior': {
+      addMove({level:2,file:piece.file,rank:piece.rank+f}, pieceAt(state,{level:2,file:piece.file,rank:piece.rank+f}), piece.rank+f===promoRank?'hero':null);
+      for(const df of [-1,1]) addCap({level:2,file:piece.file+df,rank:piece.rank+f}, pieceAt(state,{level:2,file:piece.file+df,rank:piece.rank+f}), piece.rank+f===promoRank?'hero':null);
+      break;
+    }
+    case 'oliphant': rayAny([[1,0],[-1,0],[0,1],[0,-1]]); break;
+    case 'unicorn': for(const [df,dr] of [[1,2],[1,-2],[-1,2],[-1,-2],[2,1],[2,-1],[-2,1],[-2,-1]]) leapAny(df,dr,0); break;
+    case 'hero': {
+      if(piece.level===2){
+        for(const df of [-1,1]) for(const dr of [-1,1]){ leapAny(df,dr,0); leapAny(2*df,2*dr,0); }
+        for(const df of [-1,1]) for(const dr of [-1,1]){ leapAny(df,dr,-1); leapAny(df,dr,1); }
+      } else {
+        const ld = piece.level===1?1:-1;
+        for(const df of [-1,1]) for(const dr of [-1,1]) leapAny(df,dr,ld);
+      }
+      break;
+    }
+    case 'thief': rayAny([[1,1],[1,-1],[-1,1],[-1,-1]]); break;
+    case 'cleric': {
+      for(const [df,dr] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]) leapAny(df,dr,0);
+      for(const ld of [-1,1]) if(piece.level+ld>=1&&piece.level+ld<=3) vertAny(ld);
+      break;
+    }
+    case 'mage': {
+      if(piece.level===2) rayAny([[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]);
+      else for(const [df,dr] of [[1,0],[-1,0],[0,1],[0,-1]]) leapAny(df,dr,0);
+      for(const ld of [-1,1,-2,2]){
+        const lvl=piece.level+ld; if(lvl<1||lvl>3) continue;
+        if(Math.abs(ld)===2){ const mid=piece.level+Math.sign(ld); if(pieceAt(state,{level:mid,file:piece.file,rank:piece.rank})) continue; }
+        vertAny(ld);
+      }
+      break;
+    }
+    case 'king': {
+      if(piece.level===2){
+        for(const [df,dr] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]) leapAny(df,dr,0);
+        for(const ld of [-1,1]) if(piece.level+ld>=1&&piece.level+ld<=3) vertAny(ld);
+      } else { vertAny(piece.level===1?1:-1); }
+      break;
+    }
+    case 'paladin': {
+      if(piece.level===2){
+        for(const [df,dr] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]) leapAny(df,dr,0);
+        for(const [df,dr] of [[1,2],[1,-2],[-1,2],[-1,-2],[2,1],[2,-1],[-2,1],[-2,-1]]) leapAny(df,dr,0);
+      } else {
+        for(const [df,dr] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]) leapAny(df,dr,0);
+      }
+      for(const ld of [-1,1]){
+        const lvl=piece.level+ld; if(lvl<1||lvl>3) continue;
+        for(const [df,dr] of [[2,0],[-2,0],[0,2],[0,-2]]) leapAny(df,dr,ld);
+      }
+      for(const ld of [-2,2]){
+        const lvl=piece.level+ld; if(lvl<1||lvl>3) continue;
+        for(const [df,dr] of [[1,0],[-1,0],[0,1],[0,-1]]) leapAny(df,dr,ld);
+      }
+      break;
+    }
+    case 'dwarf': {
+      addMove({level:piece.level,file:piece.file,rank:piece.rank+f}, pieceAt(state,{level:piece.level,file:piece.file,rank:piece.rank+f}));
+      for(const df of [-1,1]) addMove({level:piece.level,file:piece.file+df,rank:piece.rank}, pieceAt(state,{level:piece.level,file:piece.file+df,rank:piece.rank}));
+      for(const df of [-1,1]) addCap({level:piece.level,file:piece.file+df,rank:piece.rank+f}, pieceAt(state,{level:piece.level,file:piece.file+df,rank:piece.rank+f}));
+      if(piece.level===1) addCap({level:2,file:piece.file,rank:piece.rank}, pieceAt(state,{level:2,file:piece.file,rank:piece.rank}));
+      else if(piece.level===2) addMove({level:1,file:piece.file,rank:piece.rank}, pieceAt(state,{level:1,file:piece.file,rank:piece.rank}));
+      break;
+    }
+    case 'basilisk': {
+      addAny({level:1,file:piece.file,rank:piece.rank+f}, pieceAt(state,{level:1,file:piece.file,rank:piece.rank+f}));
+      for(const df of [-1,1]) addAny({level:1,file:piece.file+df,rank:piece.rank+f}, pieceAt(state,{level:1,file:piece.file+df,rank:piece.rank+f}));
+      addMove({level:1,file:piece.file,rank:piece.rank-f}, pieceAt(state,{level:1,file:piece.file,rank:piece.rank-f}));
+      break;
+    }
+    case 'elemental': {
+      if(piece.level===1){
+        for(const [df,dr] of [[1,0],[-1,0],[0,1],[0,-1]]){
+          const s1={level:1,file:piece.file+df,rank:piece.rank+dr};
+          if(!inBounds(s1.level,s1.file,s1.rank)) continue;
+          const o1=pieceAt(state,s1);
+          addAny(s1,o1);
+          if(!o1){
+            const s2={level:1,file:piece.file+2*df,rank:piece.rank+2*dr};
+            if(inBounds(s2.level,s2.file,s2.rank)) addAny(s2, pieceAt(state,s2));
+          }
+        }
+        for(const [df,dr] of [[1,1],[1,-1],[-1,1],[-1,-1]]) addMove({level:1,file:piece.file+df,rank:piece.rank+dr}, pieceAt(state,{level:1,file:piece.file+df,rank:piece.rank+dr}));
+        for(const [df,dr] of [[1,0],[-1,0],[0,1],[0,-1]]){
+          const mid={level:1,file:piece.file+df,rank:piece.rank+dr};
+          if(!inBounds(mid.level,mid.file,mid.rank)) continue;
+          if(pieceAt(state,mid)) continue;
+          const tgt={level:2,file:piece.file+df,rank:piece.rank+dr};
+          const occ=pieceAt(state,tgt);
+          if(occ && occ.color!==piece.color) moves.push({kind:'move',pieceId:piece.id,from:{...from},to:{...tgt},capturedPieceId:occ.id,promotion:null});
+        }
+      } else {
+        const inter=pieceAt(state,{level:1,file:piece.file,rank:piece.rank});
+        if(!inter){
+          for(const [df,dr] of [[1,0],[-1,0],[0,1],[0,-1]]) addAny({level:1,file:piece.file+df,rank:piece.rank+dr}, pieceAt(state,{level:1,file:piece.file+df,rank:piece.rank+dr}));
+        }
+      }
+      break;
+    }
+  }
+  return moves;
+}
+
+function getFrozenPieceIds(state){
+  const frozen = new Set();
+  for(const id in state.pieces){
+    const b=state.pieces[id];
+    if(b.type!=='basilisk') continue;
+    const above=pieceAt(state,{level:2,file:b.file,rank:b.rank});
+    if(above && above.color!==b.color) frozen.add(above.id);
+  }
+  return frozen;
+}
+function isFrozen(state,pieceId){ return getFrozenPieceIds(state).has(pieceId); }
+
+function generateAttackSquares(state,color){
+  const set=new Set();
+  for(const id in state.pieces){
+    const p=state.pieces[id];
+    if(p.color!==color) continue;
+    if(isFrozen(state,id)) continue;
+    for(const m of generatePseudoMoves(state,id)){
+      if(m.capturedPieceId || m.kind==='remoteCapture') set.add(key(m.to));
+    }
+  }
+  return set;
+}
+function kingsMutuallyAttacking(state){
+  const ks=[];
+  for(const id in state.pieces) if(state.pieces[id].type==='king') ks.push(state.pieces[id]);
+  if(ks.length!==2) return false;
+  const [a,b]=ks;
+  if(a.level===b.level) return Math.abs(a.file-b.file)<=1&&Math.abs(a.rank-b.rank)<=1&&!(a.file===b.file&&a.rank===b.rank);
+  if(Math.abs(a.level-b.level)===1&&a.file===b.file&&a.rank===b.rank) return true;
+  return false;
+}
+function isKingInCheck(state,color){
+  const k=findKing(state,color); if(!k) return false;
+  return generateAttackSquares(state,opp(color)).has(key(k));
+}
+
+function generateLegalMoves(state,pieceId){
+  const p=state.pieces[pieceId]; if(!p) return [];
+  if(state.turn!==p.color) return [];
+  if(isFrozen(state,pieceId)) return [];
+  const out=[];
+  for(const m of generatePseudoMoves(state,pieceId)){
+    const sim=applyMoveImmutable(state,m);
+    if(isKingInCheck(sim,p.color)) continue;
+    if(kingsMutuallyAttacking(sim)) continue;
+    out.push(m);
+  }
+  return out;
+}
+function getAllLegalMoves(state,color){
+  const out=[];
+  for(const id in state.pieces){
+    const p=state.pieces[id];
+    if(p.color!==color) continue;
+    if(state.turn!==color) return out;
+    if(isFrozen(state,id)) continue;
+    for(const m of generateLegalMoves(state,id)) out.push(m);
+  }
+  return out;
+}
+
+function cloneState(s){
+  const np={}; for(const id in s.pieces) np[id]={...s.pieces[id]};
+  return {schemaVersion:s.schemaVersion,version:s.version,status:s.status,turn:s.turn,halfMove:s.halfMove,pieces:np,moveHistory:s.moveHistory.slice(),drawOfferBy:s.drawOfferBy,winner:s.winner,resultReason:s.resultReason,players:s.players?JSON.parse(JSON.stringify(s.players)):null};
+}
+function applyMoveImmutable(state,move){
+  const next=cloneState(state);
+  const p=next.pieces[move.pieceId]; if(!p) return next;
+  if(move.kind==='remoteCapture'){
+    if(move.capturedPieceId) delete next.pieces[move.capturedPieceId];
+  } else {
+    if(move.capturedPieceId) delete next.pieces[move.capturedPieceId];
+    p.level=move.to.level; p.file=move.to.file; p.rank=move.to.rank;
+    if(move.promotion){ p.type=move.promotion; p.promoted=true; }
+  }
+  next.turn=opp(next.turn);
+  next.version=(next.version||0)+1;
+  return next;
+}
+function moveToNotation(state,move){
+  const p=state.pieces[move.pieceId]; if(!p) return '?';
+  const ab=TYPE_ABBR[p.type];
+  const sep=move.capturedPieceId?'×':'-';
+  let s=ab+' '+coordToNotation(move.from)+sep+coordToNotation(move.to);
+  if(move.kind==='remoteCapture') s+=' (remote)';
+  if(move.promotion) s+='='+TYPE_ABBR[move.promotion];
+  return s;
+}
+
+function getGameOutcome(state){
+  if(state.winner) return {over:true,winner:state.winner,reason:state.resultReason};
+  if(state.status==='finished') return {over:true,winner:null,reason:state.resultReason||'finished'};
+  const side=state.turn;
+  const inChk=isKingInCheck(state,side);
+  const moves=getAllLegalMoves(state,side);
+  if(moves.length===0){
+    if(inChk) return {over:true,winner:opp(side),reason:'checkmate'};
+    return {over:true,winner:null,reason:'stalemate (draw)'};
+  }
+  return {over:false,inCheck:inChk};
+}
+
+function serializeState(state){ return JSON.parse(JSON.stringify(state)); }
+function deserializeState(obj){
+  if(!obj||typeof obj!=='object') throw new Error('bad state');
+  const s={
+    schemaVersion:obj.schemaVersion||1,version:obj.version||0,status:obj.status||'active',
+    turn:obj.turn||'gold',halfMove:obj.halfMove||0,
+    pieces:{},moveHistory:Array.isArray(obj.moveHistory)?obj.moveHistory:[],
+    drawOfferBy:obj.drawOfferBy||null,winner:obj.winner||null,resultReason:obj.resultReason||null,
+    players:obj.players||null
+  };
+  if(obj.pieces){ for(const id in obj.pieces){ const p=obj.pieces[id]; if(p&&typeof p==='object') s.pieces[id]={...p}; } }
+  validateState(s);
+  return s;
+}
+
+const VALID_TYPES=new Set(Object.keys(TYPE_ABBR));
+function validateState(state,allowNoKing){
+  if(state.schemaVersion!==1) throw new Error('bad schema '+state.schemaVersion);
+  if(state.turn!=='gold'&&state.turn!=='scarlet') throw new Error('bad turn '+state.turn);
+  if(state.status!=='active'&&state.status!=='lobby'&&state.status!=='finished') throw new Error('bad status '+state.status);
+  const coords=new Set(), ids=new Set(), kings={gold:0,scarlet:0};
+  for(const id in state.pieces){
+    const p=state.pieces[id];
+    if(ids.has(id)) throw new Error('dup id '+id); ids.add(id);
+    if(!VALID_TYPES.has(p.type)) throw new Error('bad type '+p.type);
+    if(p.color!=='gold'&&p.color!=='scarlet') throw new Error('bad color '+p.color);
+    if(!inBounds(p.level,p.file,p.rank)) throw new Error('oob '+id);
+    const ck=key(p); if(coords.has(ck)) throw new Error('dup coord '+ck); coords.add(ck);
+    if(p.type==='king') kings[p.color]++;
+  }
+  if(!allowNoKing){
+    if(kings.gold!==1) throw new Error('gold kings '+kings.gold);
+    if(kings.scarlet!==1) throw new Error('scarlet kings '+kings.scarlet);
+  }
+  if(!Array.isArray(state.moveHistory)) throw new Error('bad history');
+}
+
+function localCommitMove(state,move,expectedVersion){
+  if(state.version!==expectedVersion) return {ok:false,reason:'stale version'};
+  const p=state.pieces[move.pieceId];
+  if(!p||p.color!==state.turn) return {ok:false,reason:'not your piece'};
+  const legal=generateLegalMoves(state,move.pieceId).some(m=>
+    m.kind===move.kind&&m.pieceId===move.pieceId&&coordEq(m.from,move.from)&&coordEq(m.to,move.to)
+  );
+  if(!legal) return {ok:false,reason:'illegal move'};
+  const next=applyMoveImmutable(state,move);
+  next.moveHistory=state.moveHistory.concat([{color:state.turn,notation:moveToNotation(state,move),version:next.version,from:move.from,to:move.to}]);
+  const outcome=getGameOutcome(next);
+  if(outcome.over){ next.status='finished'; next.winner=outcome.winner; next.resultReason=outcome.reason; }
+  return {ok:true,state:next};
+}
+
+const TESTS=[];
+function test(n,fn){ TESTS.push({n,fn}); }
+function eq(a,b){ return JSON.stringify(a)===JSON.stringify(b); }
+function movesTo(state,pieceId){ return generateLegalMoves(state,pieceId).map(m=>coordToNotation(m.to)).sort().join(','); }
+function pseudoTo(state,pieceId){ return generatePseudoMoves(state,pieceId).map(m=>coordToNotation(m.to)).sort().join(','); }
+function findId(state,color,type,notation){ for(const id in state.pieces){ const p=state.pieces[id]; if(p.color===color&&p.type===type&&coordToNotation(p)===notation) return id; } return null; }
+function emptyState(turn='gold'){ return {schemaVersion:1,version:0,status:'active',turn:turn,halfMove:0,pieces:{},moveHistory:[],drawOfferBy:null,winner:null,resultReason:null,players:null}; }
+function addP(s,id,color,type,l,f,r){ s.pieces[id]={id,color,type,level:l,file:f,rank:r}; }
+
+test('Initial 42/42',()=>{ const s=createInitialState(); let g=0,sc=0; for(const id in s.pieces){ s.pieces[id].color==='gold'?g++:sc++; } if(g!==42||sc!==42) throw new Error(g+'/'+sc); });
+test('Start coords',()=>{
+  const s=createInitialState();
+  const expect={ 'gold-griffon-1':'3c1','gold-griffon-2':'3k1','gold-dragon-1':'3g1','gold-sylph-1':'3a2','gold-sylph-6':'3k2',
+    'scarlet-griffon-1':'3c8','scarlet-dragon-1':'3g8','scarlet-sylph-1':'3a7',
+    'gold-king-1':'2g1','gold-paladin-1':'2h1','gold-oliphant-1':'2a1','gold-unicorn-1':'2b1','gold-mage-1':'2f1','gold-cleric-1':'2e1','gold-thief-1':'2d1',
+    'scarlet-king-1':'2g8','gold-warrior-1':'2a2','gold-warrior-12':'2l2','scarlet-warrior-1':'2a7',
+    'gold-basilisk-1':'1c1','gold-elemental-1':'1g1','gold-dwarf-1':'1b2','gold-dwarf-6':'1l2','scarlet-basilisk-1':'1c8','scarlet-dwarf-1':'1b7'};
+  for(const id in expect){ if(!s.pieces[id]||coordToNotation(s.pieces[id])!==expect[id]) throw new Error('mismatch '+id+' got '+(s.pieces[id]?coordToNotation(s.pieces[id]):'none')); }
+});
+test('No duplicate coords',()=>{ const s=createInitialState(); const set=new Set(); for(const id in s.pieces){ const k=key(s.pieces[id]); if(set.has(k)) throw new Error('dup '+k); set.add(k); } if(set.size!==84) throw new Error('size '+set.size); });
+test('Notation roundtrip 288',()=>{ for(let l=1;l<=3;l++) for(let f=0;f<12;f++) for(let r=0;r<8;r++){ const c={level:l,file:f,rank:r}; const n=coordToNotation(c); const b=notationToCoord(n); if(!b||!eq(c,b)) throw new Error('rt '+n); } });
+test('Forward opposite',()=>{ if(fwd('gold')!==-fwd('scarlet')) throw new Error('fwd'); });
+test('Warrior moves',()=>{
+  const s=emptyState('gold'); addP(s,'w','gold','warrior',2,5,3);
+  const pm=generatePseudoMoves(s,'w').map(m=>coordToNotation(m.to)).sort();
+  if(!pm.includes('2f5')) throw new Error('no forward '+pm);
+  if(pm.includes('2e5')||pm.includes('2g5')) throw new Error('diag on empty '+pm);
+  addP(s,'e','scarlet','warrior',2,6,4);
+  const pm2=generatePseudoMoves(s,'w').map(m=>coordToNotation(m.to));
+  if(!pm2.includes('2g5')) throw new Error('no diag cap '+pm2);
+});
+test('Warrior promotion',()=>{
+  const s=emptyState('gold'); addP(s,'w','gold','warrior',2,5,6);
+  const m=generatePseudoMoves(s,'w').find(m=>coordToNotation(m.to)==='2f8');
+  if(!m||m.promotion!=='hero') throw new Error('no promo '+(m?m.promotion:m));
+  const s3=applyMoveImmutable(s,m); if(s3.pieces['w'].type!=='hero'||!s3.pieces['w'].promoted) throw new Error('not promoted');
+});
+test('Sylph moves',()=>{
+  const s=emptyState('gold'); addP(s,'s','gold','sylph',3,5,1);
+  const pm=generatePseudoMoves(s,'s').map(m=>coordToNotation(m.to)).sort();
+  if(!pm.includes('3e3')||!pm.includes('3g3')) throw new Error('no diag passive '+pm);
+  if(pm.includes('3f3')) throw new Error('fwd on empty '+pm);
+  if(pm.includes('2f2')) throw new Error('down on empty '+pm);
+  addP(s,'e','scarlet','warrior',2,5,1);
+  const pm2=generatePseudoMoves(s,'s').map(m=>coordToNotation(m.to));
+  if(!pm2.includes('2f2')) throw new Error('no down cap '+pm2);
+  const s3=emptyState('gold'); addP(s3,'s','gold','sylph',2,5,4);
+  const pm3=generatePseudoMoves(s3,'s').map(m=>coordToNotation(m.to)).sort();
+  if(!pm3.includes('3f5')) throw new Error('no return corr '+pm3);
+  if(!pm3.includes('3a2')) throw new Error('no return start '+pm3);
+});
+test('Griffon zebra+transition',()=>{
+  const s=emptyState('gold'); addP(s,'g','gold','griffon',3,5,3);
+  const pm=generatePseudoMoves(s,'g').map(m=>coordToNotation(m.to)).sort();
+  if(!pm.includes('3i6')) throw new Error('no zebra '+pm);
+  if(!pm.includes('2e3')) throw new Error('no space-diag '+pm);
+  const s2=emptyState('gold'); addP(s2,'g','gold','griffon',2,5,3);
+  const pm2=generatePseudoMoves(s2,'g').map(m=>coordToNotation(m.to)).sort();
+  if(!pm2.includes('2e3')) throw new Error('griffon L2 diag '+pm2);
+  if(!pm2.includes('3e3')) throw new Error('griffon L2->L3 '+pm2);
+});
+test('Dragon',()=>{
+  const s=emptyState('gold'); addP(s,'d','gold','dragon',3,5,3);
+  const pm=generatePseudoMoves(s,'d').map(m=>coordToNotation(m.to)).sort();
+  if(!pm.includes('3e4')) throw new Error('no orth step '+pm);
+  if(!pm.includes('3h6')) throw new Error('no slide '+pm);
+  addP(s,'e','scarlet','warrior',2,6,3);
+  const rc=generatePseudoMoves(s,'d').find(m=>m.kind==='remoteCapture'&&coordToNotation(m.to)==='2g4');
+  if(!rc) throw new Error('no remote');
+  const after=applyMoveImmutable(s,rc);
+  if(after.pieces['e']) throw new Error('enemy not removed');
+  if(!after.pieces['d']) throw new Error('dragon gone');
+  if(!coordEq(after.pieces['d'],{level:3,file:5,rank:3})) throw new Error('dragon moved');
+});
+test('Oliphant path blocked',()=>{
+  const s=emptyState('gold'); addP(s,'o','gold','oliphant',2,5,3); addP(s,'x','gold','dwarf',2,5,5);
+  const pm=generatePseudoMoves(s,'o').map(m=>coordToNotation(m.to)).sort();
+  if(pm.includes('2f7')) throw new Error('passed blocker '+pm);
+  if(!pm.includes('2f5')) throw new Error('no up to blocker '+pm);
+  const s2=emptyState('gold'); addP(s2,'o','gold','oliphant',2,5,3); addP(s2,'e','scarlet','dwarf',2,5,5);
+  const pm2=generatePseudoMoves(s2,'o').map(m=>coordToNotation(m.to));
+  if(!pm2.includes('2f6')) throw new Error('no capture blocker '+pm2);
+  if(pm2.includes('2f7')) throw new Error('captured through enemy '+pm2);
+});
+test('Thief path blocked',()=>{
+  const s=emptyState('gold'); addP(s,'t','gold','thief',2,5,3); addP(s,'x','gold','dwarf',2,7,5);
+  const pm=generatePseudoMoves(s,'t').map(m=>coordToNotation(m.to)).sort();
+  if(pm.includes('2i7')) throw new Error('thief passed blocker '+pm);
+  if(!pm.includes('2g5')) throw new Error('thief no diag '+pm);
+});
+test('Unicorn knight',()=>{
+  const s=emptyState('gold'); addP(s,'u','gold','unicorn',2,5,3);
+  const pm=generatePseudoMoves(s,'u').map(m=>coordToNotation(m.to)).sort();
+  if(!pm.includes('2e2')&&!pm.includes('2h5')) throw new Error('no knight '+pm);
+});
+test('Hero',()=>{
+  const s=emptyState('gold'); addP(s,'h','gold','hero',2,5,3);
+  const pm=generatePseudoMoves(s,'h').map(m=>coordToNotation(m.to)).sort();
+  if(!pm.includes('2h6')) throw new Error('no 2-step leap '+pm);
+  if(!pm.includes('1e3')) throw new Error('no L1 space-diag '+pm);
+  if(!pm.includes('3e3')) throw new Error('no L3 space-diag '+pm);
+  const s2=emptyState('gold'); addP(s2,'h','gold','hero',3,5,4);
+  const pm2=generatePseudoMoves(s2,'h').map(m=>coordToNotation(m.to)).sort();
+  if(!pm2.includes('2e4')) throw new Error('hero L3 return '+pm2);
+  if(pm2.some(n=>n.startsWith('3'))) throw new Error('hero moved in-plane on L3 '+pm2);
+});
+test('Cleric',()=>{
+  const s=emptyState('gold'); addP(s,'c','gold','cleric',2,5,3);
+  const pm=generatePseudoMoves(s,'c').map(m=>coordToNotation(m.to)).sort();
+  if(!pm.includes('1f4')) throw new Error('cleric no down '+pm);
+  if(!pm.includes('3f4')) throw new Error('cleric no up '+pm);
+  if(!pm.includes('2e4')) throw new Error('cleric no in-plane '+pm);
+  const s2=emptyState('gold'); addP(s2,'c','gold','cleric',1,5,3);
+  const pm2=generatePseudoMoves(s2,'c').map(m=>m.to);
+  if(pm2.some(t=>t.level===3)) throw new Error('cleric skipped levels');
+});
+test('Mage',()=>{
+  const s=emptyState('gold'); addP(s,'m','gold','mage',2,5,3);
+  const pm=generatePseudoMoves(s,'m').map(m=>coordToNotation(m.to)).sort();
+  if(!pm.includes('1f4')) throw new Error('mage no L1 '+pm);
+  const s2=emptyState('gold'); addP(s2,'m','gold','mage',3,5,4);
+  const pm2=generatePseudoMoves(s2,'m').map(m=>coordToNotation(m.to)).sort();
+  if(pm2.includes('3e4')||pm2.includes('3g6')) throw new Error('mage diag on L3 '+pm2);
+  if(!pm2.includes('3e5')) throw new Error('mage orth L3 '+pm2);
+  const s3=emptyState('gold'); addP(s3,'m','gold','mage',1,5,3); addP(s3,'x','gold','dwarf',2,5,3);
+  const pm3=generatePseudoMoves(s3,'m').filter(m=>m.to.level===3);
+  if(pm3.length) throw new Error('mage jumped '+pm3.map(m=>coordToNotation(m.to)));
+});
+test('King outer restriction',()=>{
+  const s=emptyState('gold'); addP(s,'k','gold','king',2,5,3); addP(s,'sk','scarlet','king',2,0,0);
+  const pm=generatePseudoMoves(s,'k').map(m=>coordToNotation(m.to)).sort();
+  if(!pm.includes('1f4')) throw new Error('king no L1 '+pm);
+  if(!pm.includes('2e4')) throw new Error('king no in-plane '+pm);
+  const s2=emptyState('gold'); addP(s2,'k','gold','king',1,5,3); addP(s2,'sk','scarlet','king',2,0,0);
+  const pm2=generatePseudoMoves(s2,'k').map(m=>coordToNotation(m.to));
+  if(!pm2.includes('2f4')) throw new Error('king L1 return '+pm2);
+  if(pm2.some(t=>t.level===1 && !(t.file===5&&t.rank===3))) throw new Error('king moved in-plane on L1');
+  const s3=emptyState('gold'); addP(s3,'k','gold','king',2,5,3); addP(s3,'sk','scarlet','king',2,0,0); addP(s3,'ro','scarlet','oliphant',2,0,4);
+  const legal=generateLegalMoves(s3,'k');
+  if(legal.some(m=>coordToNotation(m.to)==='2f5')) throw new Error('king moved into attack');
+});
+test('Paladin',()=>{
+  const s=emptyState('gold'); addP(s,'p','gold','paladin',2,5,3);
+  const pm=generatePseudoMoves(s,'p').map(m=>coordToNotation(m.to)).sort();
+  if(!pm.includes('2e4')) throw new Error('paladin no king-step '+pm);
+  if(!pm.includes('2h3')) throw new Error('paladin no knight '+pm);
+  if(!pm.includes('3d4')) throw new Error('paladin no inter+1 '+pm);
+  if(!pm.includes('1d4')) throw new Error('paladin no inter-1 '+pm);
+  const s2=emptyState('gold'); addP(s2,'p','gold','paladin',1,5,3);
+  const pm2=generatePseudoMoves(s2,'p').map(m=>coordToNotation(m.to));
+  if(pm2.includes('1e1')) throw new Error('paladin knight on L1 '+pm2);
+  if(!pm2.includes('1e3')) throw new Error('paladin no king-step on L1 '+pm2);
+});
+test('Dwarf',()=>{
+  const s=emptyState('gold'); addP(s,'d','gold','dwarf',2,5,3);
+  const pm=generatePseudoMoves(s,'d').map(m=>coordToNotation(m.to)).sort();
+  if(!pm.includes('2f5')) throw new Error('no fwd '+pm);
+  if(!pm.includes('2e4')) throw new Error('no side '+pm);
+  if(pm.includes('2e5')) throw new Error('diag on empty '+pm);
+  addP(s,'e','scarlet','dwarf',2,6,4);
+  const pm2=generatePseudoMoves(s,'d').map(m=>coordToNotation(m.to));
+  if(!pm2.includes('2g5')) throw new Error('no diag cap '+pm2);
+  const s3=emptyState('gold'); addP(s3,'d','gold','dwarf',2,5,3);
+  const pm3=generatePseudoMoves(s3,'d').map(m=>coordToNotation(m.to));
+  if(!pm3.includes('1f4')) throw new Error('no down '+pm3);
+  const s4=emptyState('gold'); addP(s4,'d','gold','dwarf',1,5,3); addP(s4,'e','scarlet','warrior',2,5,3);
+  const pm4=generatePseudoMoves(s4,'d').map(m=>coordToNotation(m.to));
+  if(!pm4.includes('2f4')) throw new Error('no up cap '+pm4);
+  const s5=emptyState('gold'); addP(s5,'d','gold','dwarf',1,5,3);
+  const pm5=generatePseudoMoves(s5,'d').map(m=>coordToNotation(m.to));
+  if(pm5.includes('2f4')) throw new Error('dwarf up without cap '+pm5);
+});
+test('Basilisk',()=>{
+  const s=emptyState('gold'); addP(s,'b','gold','basilisk',1,5,3);
+  const pm=generatePseudoMoves(s,'b').map(m=>coordToNotation(m.to)).sort();
+  if(!pm.includes('1f5')) throw new Error('no fwd '+pm);
+  if(!pm.includes('1e5')) throw new Error('no diag '+pm);
+  if(!pm.includes('1f3')) throw new Error('no back '+pm);
+  const s2=emptyState('gold'); addP(s2,'b','gold','basilisk',1,5,3); addP(s2,'e','scarlet','dwarf',1,5,2);
+  const pm2=generatePseudoMoves(s2,'b').map(m=>coordToNotation(m.to));
+  if(pm2.includes('1f3')) throw new Error('back capture '+pm2);
+  const s3=emptyState('scarlet'); addP(s3,'b','gold','basilisk',1,5,3); addP(s3,'e','scarlet','warrior',2,5,3);
+  const fr=getFrozenPieceIds(s3); if(!fr.has('e')) throw new Error('no freeze');
+  if(generateLegalMoves(s3,'e').length) throw new Error('frozen can move');
+  const s4=cloneState(s3); s4.pieces['b'].file=4; s4.pieces['b'].rank=3;
+  if(getFrozenPieceIds(s4).has('e')) throw new Error('still frozen');
+});
+test('Elemental',()=>{
+  const s=emptyState('gold'); addP(s,'e','gold','elemental',1,5,3);
+  const pm=generatePseudoMoves(s,'e').map(m=>coordToNotation(m.to)).sort();
+  if(!pm.includes('1f5')) throw new Error('no 1-step '+pm);
+  if(!pm.includes('1f6')) throw new Error('no 2-step '+pm);
+  if(!pm.includes('1e3')) throw new Error('no diag passive '+pm);
+  const s2=emptyState('gold'); addP(s2,'e','gold','elemental',1,5,3); addP(s2,'x','gold','dwarf',1,5,4);
+  const pm2=generatePseudoMoves(s2,'e').map(m=>coordToNotation(m.to));
+  if(pm2.includes('1f6')) throw new Error('elem jumped '+pm2);
+  const s3=emptyState('gold'); addP(s3,'e','gold','elemental',1,5,3); addP(s3,'t','scarlet','warrior',2,6,3);
+  const pm3=generatePseudoMoves(s3,'e').map(m=>coordToNotation(m.to));
+  if(!pm3.includes('2g4')) throw new Error('no ascent '+pm3);
+  const s4=emptyState('gold'); addP(s4,'e','gold','elemental',1,5,3); addP(s4,'t','scarlet','warrior',2,6,3); addP(s4,'x','gold','dwarf',1,6,3);
+  const pm4=generatePseudoMoves(s4,'e').map(m=>coordToNotation(m.to));
+  if(pm4.includes('2g4')) throw new Error('ascent through block '+pm4);
+  const s5=emptyState('gold'); addP(s5,'e','gold','elemental',2,5,3);
+  const pm5=generatePseudoMoves(s5,'e').map(m=>coordToNotation(m.to)).sort();
+  if(!pm5.includes('1e4')) throw new Error('no descent '+pm5);
+  const s6=cloneState(s5); addP(s6,'x','gold','dwarf',1,5,3);
+  const pm6=generatePseudoMoves(s6,'e').map(m=>coordToNotation(m.to));
+  if(pm6.includes('1e4')) throw new Error('descent through block '+pm6);
+});
+test('Pin',()=>{
+  const s=emptyState('gold');
+  addP(s,'gk','gold','king',2,5,4);
+  addP(s,'gb','gold','oliphant',2,5,5);
+  addP(s,'sr','scarlet','oliphant',2,5,7);
+  addP(s,'sk','scarlet','king',2,0,0);
+  const legal=generateLegalMoves(s,'gb');
+  if(legal.some(m=>coordToNotation(m.to)==='2a6')) throw new Error('pinned moved off line '+legal.map(m=>coordToNotation(m.to)));
+  if(!legal.some(m=>coordToNotation(m.to)==='2f8')) throw new Error('cannot capture attacker '+legal.map(m=>coordToNotation(m.to)));
+});
+test('Dragon remote check',()=>{
+  const s=emptyState('gold');
+  addP(s,'gd','gold','dragon',3,5,4);
+  addP(s,'sk','scarlet','king',2,5,4);
+  if(!isKingInCheck(s,'scarlet')) throw new Error('dragon remote not check');
+});
+test('Checkmate vs stalemate',()=>{
+  const cm=emptyState('scarlet');
+  const P=(id,color,type,l,f,r)=> cm.pieces[id]={id,color,type,level:l,file:f,rank:r};
+  P('gk','gold','king',2,11,0);
+  P('sk','scarlet','king',2,0,7);
+  P('o1','gold','oliphant',2,0,0);
+  P('o2','gold','oliphant',2,1,0);
+  P('b1','gold','basilisk',1,0,6);
+  P('gr1','gold','griffon',3,2,4);
+  const o=getGameOutcome(cm);
+  if(o.winner!=='gold'||o.reason!=='checkmate') throw new Error('not mate winner='+o.winner+' reason='+o.reason+' moves='+getAllLegalMoves(cm,'scarlet').length);
+
+  const sm=emptyState('scarlet');
+  const Q=(id,color,type,l,f,r)=> sm.pieces[id]={id,color,type,level:l,file:f,rank:r};
+  Q('gk','gold','king',2,11,0);
+  Q('sk','scarlet','king',2,0,7);
+  Q('h1','gold','hero',2,2,4);
+  Q('h2','gold','hero',2,3,4);
+  Q('u1','gold','unicorn',2,2,5);
+  Q('b1','gold','basilisk',1,0,6);
+  Q('gr1','gold','griffon',3,2,4);
+  if(isKingInCheck(sm,'scarlet')) throw new Error('stalemate king is in check');
+  const o2=getGameOutcome(sm);
+  if(o2.winner!==null||o2.reason!=='stalemate (draw)') throw new Error('not stalemate winner='+o2.winner+' reason='+o2.reason+' moves='+getAllLegalMoves(sm,'scarlet').length);
+});
+test('Serialization preserves ids',()=>{
+  const s=createInitialState(); const str=JSON.stringify(serializeState(s)); const d=deserializeState(JSON.parse(str));
+  const a=Object.keys(s.pieces).sort().join(), b=Object.keys(d.pieces).sort().join();
+  if(a!==b) throw new Error('ids differ');
+  for(const id in s.pieces) if(coordToNotation(s.pieces[id])!==coordToNotation(d.pieces[id])) throw new Error('pos '+id);
+});
+test('Stale version rejected',()=>{
+  const s=createInitialState(); const id=findId(s,'gold','warrior','2a2');
+  const m=generateLegalMoves(s,id)[0];
+  const r1=localCommitMove(s,m,0); if(!r1.ok) throw new Error('move1 failed '+r1.reason);
+  const r2=localCommitMove(r1.state, m, 0); if(r2.ok) throw new Error('stale accepted');
+});
+
+function runRuleTests(){
+  const results=[];
+  for(const t of TESTS){
+    try{ t.fn(); results.push({n:t.n,pass:true}); }
+    catch(e){ results.push({n:t.n,pass:false,err:String(e.message||e)}); }
+  }
+  return results;
+}
+
+const EMBLEM = {
+ sylph:'<path d="M3 11 L8 5 L13 11"/>',
+ griffon:'<path d="M3 12 L8 4 L13 12"/><path d="M6 9 L8 6.5 L10 9"/>',
+ dragon:'<path d="M8 3 C5.5 6 5.5 9 8 13 C10.5 9 10.5 6 8 3 Z"/>',
+ warrior:'<path d="M4 4 L12 4 L12 9 Q8 13 4 9 Z"/>',
+ oliphant:'<path d="M4 5 Q4 12 11 12"/><path d="M4 5 L7 5"/>',
+ unicorn:'<path d="M8 3 L12 13 L4 13 Z"/>',
+ hero:'<path d="M8 3 L9.3 6.8 L13.5 7 L10.2 9.6 L11.3 13.5 L8 11.2 L4.7 13.5 L5.8 9.6 L2.5 7 L6.7 6.8 Z"/>',
+ thief:'<path d="M8 3 L8 11"/><path d="M6 11 L10 11 L8 13 Z"/>',
+ cleric:'<path d="M8 3 L8 13 M4 7 L12 7"/>',
+ mage:'<circle cx="8" cy="8" r="4.2"/><circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none"/>',
+ king:'<path d="M3 12 L3 6 L6 9 L8 5 L10 9 L13 6 L13 12 Z"/>',
+ paladin:'<path d="M8 3 L8 13 M4 7 L12 7"/><path d="M5.5 3.5 L8 2 L10.5 3.5"/>',
+ dwarf:'<path d="M5 5 L11 5 L11 8 L9 8 L9 13 L7 13 L7 8 L5 8 Z"/>',
+ basilisk:'<path d="M3 8 Q8 4 13 8 Q8 12 3 8 Z"/><circle cx="8" cy="8" r="1.7" fill="currentColor" stroke="none"/>',
+ elemental:'<path d="M8 3 L13 13 L3 13 Z"/>'
+};
+function emblemSVG(type){
+  return '<svg class="emblem" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+EMBLEM[type]+'</svg>';
+}
+function tokenHTML(piece){
+  const cls='token '+piece.color+(piece.promoted?' promoted':'');
+  return '<span class="'+cls+'">'+emblemSVG(piece.type)+'<span class="abbr">'+TYPE_ABBR[piece.type]+'</span></span>';
+}
+
+const LAYOUT_STORAGE_KEY='dc_layout';
+const App = {
+  mode:'local',
+  localState:null,
+  view:'gold',
+  selectedId:null,
+  legal:[],
+  inspectingId:null,
+  inspectLegal:[],
+  demo:false,
+  pending:false,
+  activeLevel:2,
+  boardLayout:'focus',
+  socket:null, connected:false, sessionToken:null,
+  code:null, seat:null, myName:'Player',
+  rematchCount:0,
+  queued:false,
+  lastMoveStr:'',
+  stateListenersAttached:false,
+  guideWired:false,
+  profile:null,
+  historyPage:1, historyPageSize:10, historyTotal:0, history:[] , authMode:'login', authPending:false,
+  bootAuth:false, bootSocketReady:false, booted:false, resumeInFlight:false,
+};
+
+const PIECE_GUIDE = {
+  sky:[
+    {t:'sylph',name:'Sylph (S)',d:'L3: steps one square diagonally forward to an empty square; captures one square straight forward; may capture directly below on L2 (moves there). L2: no in-plane move; returns to L3 either to the matching square or any of your six original Sylph squares, if empty.'},
+    {t:'griffon',name:'Griffon (G)',d:'L3: zebra leaper (±3,±2)/(±2,±3) in-plane, jumps; or space-diagonal step to L2 (file±1,rank±1). L2: one square diagonal in-plane; or back to L3 (file±1,rank±1) leap. Never enters L1.'},
+    {t:'dragon',name:'Dragon (R)',d:'L3 only. Slides any distance diagonally; steps one square orthogonally. May instead remotely capture one enemy on L2 at/next to its file-rank, staying put. Remote targets count as attacks.'}
+  ],
+  ground:[
+    {t:'warrior',name:'Warrior (W)',d:'L2 only. Steps one square forward (empty); captures one square diagonally forward. Promotes automatically to Hero at the far rank.'},
+    {t:'oliphant',name:'Oliphant (O)',d:'L2 only. Rook: slides any distance orthogonally, blocked by pieces. No castling.'},
+    {t:'unicorn',name:'Unicorn (U)',d:'L2 only. Knight: leaps (±1,±2)/(±2,±1), jumping over pieces.'},
+    {t:'hero',name:'Hero (H)',d:'L2: one or two squares diagonally (two-square is a leap); or space-diagonal leap to L1/L3 (file±1,rank±1). On L1/L3: only returns to L2 (file±1,rank±1) leap, move or capture.'},
+    {t:'thief',name:'Thief (T)',d:'L2 only. Bishop: slides any distance diagonally, blocked by pieces.'},
+    {t:'cleric',name:'Cleric (C)',d:'Any level: one square in any of 8 king directions; or vertically to the same file-rank on an adjacent level. Vertical moves may capture. Cannot skip L1↔L3. Not royal.'},
+    {t:'mage',name:'Mage (M)',d:'L2: queen (slides any distance orthogonally or diagonally). L1/L3: one square orthogonally (may capture), no diagonal. Any level: vertically to same file-rank one or two levels away; two-level move is blocked if the L2 square is occupied.'},
+    {t:'king',name:'King (K)',d:'L2: one square in any king direction; or vertically to L1/L3 same square. L1/L3: only returns vertically to L2. Royal: may not move into attack or stay in check. No castling. Kings never mutually attack.'},
+    {t:'paladin',name:'Paladin (P)',d:'L2: king or knight in-plane. L1/L3: king in-plane only. Any level, inter-level leaps: ±1 level → exactly two orthogonal squares in-plane; ±2 levels → exactly one orthogonal square. Jumps all intermediate squares. May capture.'}
+  ],
+  under:[
+    {t:'dwarf',name:'Dwarf (D)',d:'L1/L2: non-capturing one square forward or sideways; captures one square diagonally forward. No backward, no double, no promotion. From L1 may capture directly above to L2 (same square); from L2 may step directly down to empty L1. Never L3.'},
+    {t:'basilisk',name:'Basilisk (B)',d:'L1 only. Moves/captures one square straight or diagonally forward; may move one square straight backward only to an empty square (no backward capture). No sideways. Freezes an enemy directly above on L2 until the Basilisk moves or is captured.'},
+    {t:'elemental',name:'Elemental (E)',d:'L1: moves/captures 1–2 squares orthogonally (two-square non-leap); one diagonal step only to an empty square. L1→L2 capture-only: target one orthogonal away, intermediate L1 square must be empty. L2: returns to L1 (intermediate L1 below origin empty; final one orthogonal away, move or capture). Never L3.'}
+  ]
+};
+const PIECE_RULES = {};
+Object.values(PIECE_GUIDE).flat().forEach(e=>PIECE_RULES[e.t]=e.d);
+
+const $ = s=>document.querySelector(s);
+function el(tag,cls,html){ const e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; }
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+function myColor(){ if(App.mode==='online'&&App.seat) return App.seat; return App.localState?App.localState.turn:null; }
+function opponentColor(){ const m=myColor(); return m?opp(m):null; }
+function viewRulesBtn(type){
+  const b=el('button','view-rules-btn'); b.type='button';
+  b.textContent='View rules for '+cap(type);
+  b.setAttribute('aria-label','Open the '+type+' piece rules card');
+  b.onclick=()=>{
+    const entry=document.querySelector('.piece-entry[data-type="'+type+'"]');
+    if(entry){
+      if(entry.tagName==='DETAILS') entry.open=true;
+      try{ entry.scrollIntoView({block:'nearest',behavior:'smooth'}); }catch(e){}
+      try{ (entry.querySelector('summary')||entry).focus(); }catch(e){}
+    }
+  };
+  return b;
+}
+function withScrollSpy(fn){
+  const calls=[];
+  const orig=Element.prototype.scrollIntoView;
+  Element.prototype.scrollIntoView=function(){ calls.push(this); };
+  try{ fn(); } finally{ Element.prototype.scrollIntoView=orig; }
+  return calls;
+}
+function announce(msg,assertive){
+  const a=$('#'+(assertive?'announce-assert':'announce'));
+  if(a){ a.textContent=''; setTimeout(()=>{ a.textContent=msg; },30); }
+}
+function showConfirm(title,msg,onYes){
+  const d=$('#confirmDialog'); $('#confirmTitle').textContent=title; $('#confirmMsg').textContent=msg;
+  d._onYes=onYes; d.showModal();
+}
+function showInfo(title,msg){
+  const d=$('#infoDialog'); $('#infoTitle').textContent=title; $('#infoMsg').textContent=msg; d.showModal();
+}
+
+function renderBoards(state){
+  const cont=$('#boardsContainer'); cont.innerHTML='';
+  cont.className='boards '+(App.boardLayout==='focus'?'focus-layout':'all-layout');
+  const frozen=new Set(getFrozenPieceIds(state));
+  for(const level of ALL_LAYER_ORDER){
+    const cls = level===3?'sky':level===2?'grd':'und';
+    const wrap=el('div','board-wrap');
+    wrap.dataset.level=level;
+    const head=el('div','board-head');
+    const btn=el('button','board-head-btn'); btn.type='button'; btn.dataset.level=level;
+    btn.textContent=LEVEL_NAME[level]+' · Level '+level;
+    head.appendChild(btn);
+    wrap.appendChild(head);
+    const filesTop=el('div','files'); for(let i=0;i<12;i++){ const s=el('span','',fileChar(App.view==='gold'?i:11-i)); filesTop.appendChild(s); }
+    wrap.appendChild(filesTop);
+    const mid=el('div','board-mid');
+    const ranksL=el('div','ranks'); const ranksR=el('div','ranks');
+    for(let i=0;i<8;i++){ const rv = App.view==='gold'? (8-i) : (i+1); ranksL.appendChild(el('span','',String(rv))); ranksR.appendChild(el('span','',String(rv))); }
+    const grid=el('div','board-grid board '+cls);
+    const cells=[];
+    for(let drow=0;drow<8;drow++) for(let dcol=0;dcol<12;dcol++){
+      const file = App.view==='gold'? dcol : 11-dcol;
+      const rank = App.view==='gold'? 7-drow : drow;
+      cells.push({drow,dcol,file,rank});
+    }
+    for(const c of cells){
+      const coord={level,file:c.file,rank:c.rank};
+      const piece=pieceAt(state,coord);
+      const sq=el('button','sq '+( ((c.file+c.rank)%2===0)?'light':'dark' ));
+      sq.dataset.level=level; sq.dataset.file=c.file; sq.dataset.rank=c.rank;
+      sq.style.gridRow=(c.drow+1); sq.style.gridColumn=(c.dcol+1);
+      const coordTxt=coordToNotation(coord);
+      const coordSpan=el('span','coord',coordTxt);
+      sq.appendChild(coordSpan);
+      if(piece){ const tok=el('span','token '+piece.color+(piece.promoted?' promoted':''));
+        tok.innerHTML=emblemSVG(piece.type)+'<span class="abbr">'+TYPE_ABBR[piece.type]+'</span>';
+        sq.appendChild(tok);
+      }
+      let label=coordTxt+', '+LEVEL_NAME[level]+', '+(piece?(piece.color+' '+piece.type+(piece.promoted?' (promoted)':'')+' token'):'empty');
+      if(frozen.has(piece?.id)) label+=', frozen';
+      sq.setAttribute('aria-label',label);
+      sq.setAttribute('title',label);
+      sq.type='button';
+      sq.tabIndex=0;
+      grid.appendChild(sq);
+    }
+    mid.appendChild(ranksL); mid.appendChild(grid); mid.appendChild(ranksR);
+    wrap.appendChild(mid);
+    const filesBot=el('div','files'); for(let i=0;i<12;i++){ const s=el('span','',fileChar(App.view==='gold'?i:11-i)); filesBot.appendChild(s); }
+    wrap.appendChild(filesBot);
+    cont.appendChild(wrap);
+  }
+  refreshBoardMode();
+  applyHighlights(state);
+}
+
+function updateLayerButtons(){
+  document.querySelectorAll('.layer-btn').forEach(b=>{
+    const l=+b.dataset.level;
+    b.setAttribute('aria-pressed', l===App.activeLevel?'true':'false');
+  });
+}
+function tallyCrossMoves(moves, originLevel){
+  const byLevel = {};
+  for(const m of moves){
+    if(m.to.level===originLevel) continue;
+    const e = byLevel[m.to.level] || (byLevel[m.to.level]={move:0,capture:0,remote:0});
+    if(m.kind==='remoteCapture') e.remote++;
+    else if(m.capturedPieceId) e.capture++;
+    else e.move++;
+  }
+  return byLevel;
+}
+function crossTallyLabel(tally){
+  const total = tally.move+tally.capture+tally.remote;
+  const parts=[];
+  if(tally.move) parts.push(tally.move+' move'+(tally.move>1?'s':''));
+  if(tally.capture) parts.push(tally.capture+' capture'+(tally.capture>1?'s':''));
+  if(tally.remote) parts.push(tally.remote+' remote');
+  return total+' target'+(total>1?'s':'')+(parts.length?' ('+parts.join(', ')+')':'');
+}
+function updateCrossLayerHints(){
+  document.querySelectorAll('.board-wrap').forEach(w=>{ w.classList.remove('has-cross'); const b=w.querySelector('.cross-badge'); if(b) b.remove(); });
+  document.querySelectorAll('.layer-btn').forEach(b=>b.classList.remove('has-cross'));
+  const state=currentMoveState();
+  const activeId = App.selectedId || App.inspectingId;
+  const moves = App.selectedId ? App.legal : App.inspectLegal;
+  if(!activeId || !state || !state.pieces[activeId] || !moves) return;
+  const originLevel = state.pieces[activeId].level;
+  const inspecting = !!App.inspectingId;
+  const byLevel = tallyCrossMoves(moves, originLevel);
+  for(const l of ALL_LAYER_ORDER){
+    const tally = byLevel[l];
+    if(!tally || (tally.move+tally.capture+tally.remote)===0) continue;
+    const w=document.querySelector('.board-wrap[data-level="'+l+'"]');
+    if(w){
+      w.classList.add('has-cross');
+      const badge=el('button','cross-badge'); badge.type='button';
+      badge.setAttribute('aria-label', LEVEL_NAME[l]+' board: '+crossTallyLabel(tally)+'. Open this board.');
+      badge.textContent = LEVEL_NAME[originLevel]+' → '+LEVEL_NAME[l]+': '+crossTallyLabel(tally);
+      badge.onclick=(ev)=>{ ev.preventDefault(); setActiveLevel(l); };
+      w.querySelector('.board-head').appendChild(badge);
+    }
+    const lb=document.querySelector('.layer-btn[data-level="'+l+'"]'); if(lb) lb.classList.add('has-cross');
+  }
+}
+function refreshBoardMode(){
+  const cont=$('#boardsContainer');
+  const focus=App.boardLayout==='focus';
+  cont.classList.toggle('focus-layout',focus);
+  cont.classList.toggle('all-layout',!focus);
+  if(focus){
+    const wraps={}; cont.querySelectorAll('.board-wrap').forEach(w=>{ wraps[w.dataset.level]=w; });
+    const order=[App.activeLevel].concat(ALL_LAYER_ORDER.filter(l=>l!==App.activeLevel));
+    order.forEach(l=>{ if(wraps[l]) cont.appendChild(wraps[l]); });
+  }
+  cont.querySelectorAll('.board-wrap').forEach(w=>{
+    const l=+w.dataset.level;
+    const isActive = focus && l===App.activeLevel;
+    w.classList.toggle('active-board',isActive);
+    w.classList.toggle('preview-board', focus && !isActive);
+    w.querySelectorAll('.sq').forEach(s=>{ s.tabIndex = (focus && !isActive) ? -1 : 0; });
+    const btn=w.querySelector('.board-head-btn');
+    if(btn){
+      btn.setAttribute('aria-pressed', isActive?'true':'false');
+      btn.setAttribute('aria-label', isActive ? (LEVEL_NAME[l]+' board, currently active') : ('Open '+LEVEL_NAME[l]+' board'));
+    }
+  });
+  updateLayerButtons();
+  document.querySelectorAll('.layout-btn').forEach(b=> b.setAttribute('aria-pressed', b.dataset.layout===App.boardLayout?'true':'false'));
+  renderSummaryCards();
+}
+function setActiveLevel(level, options){
+  options=options||{};
+  if(level!==1&&level!==2&&level!==3) return;
+  App.activeLevel=level;
+  refreshBoardMode();
+  applyHighlights(currentMoveState());
+  if(!options.silent) announce(LEVEL_NAME[level]+' board opened.');
+}
+function setLayout(layout){
+  if(layout!=='focus'&&layout!=='all') return;
+  App.boardLayout=layout;
+  try{ localStorage.setItem(LAYOUT_STORAGE_KEY,layout); }catch(e){}
+  refreshBoardMode();
+  applyHighlights(currentMoveState());
+}
+function renderSummaryCards(){
+  const sc=$('#summaryCards'); if(!sc) return;
+  sc.innerHTML='';
+  const state=currentMoveState(); if(!state) return;
+  const outcome=getGameOutcome(state);
+  const chkKing = outcome.inCheck ? findKing(state,state.turn) : null;
+  for(const l of ALL_LAYER_ORDER){
+    if(l===App.activeLevel) continue;
+    const card=el('button','summary-card'); card.type='button'; card.dataset.level=l;
+    card.setAttribute('aria-label','Open '+LEVEL_NAME[l]+' board, level '+l);
+    const counts={gold:0,scarlet:0}; let frozenN=0;
+    for(const id in state.pieces){ const p=state.pieces[id]; if(p.level===l){ counts[p.color]++; if(isFrozen(state,id)) frozenN++; } }
+    const inChk = !!(outcome.inCheck && chkKing && chkKing.level===l);
+    const activeId = App.selectedId || App.inspectingId;
+    const moves = App.selectedId ? App.legal : App.inspectLegal;
+    let crossTxt='No cross-layer targets';
+    if(activeId && state.pieces[activeId] && moves){
+      const byLevel = tallyCrossMoves(moves, state.pieces[activeId].level);
+      const t = byLevel[l];
+      if(t && (t.move+t.capture+t.remote)>0) crossTxt = LEVEL_NAME[state.pieces[activeId].level]+' → '+LEVEL_NAME[l]+': '+crossTallyLabel(t);
+    }
+    card.appendChild(el('span','sc-title',LEVEL_NAME[l]+' · Level '+l));
+    card.appendChild(el('span','sc-info','Gold '+counts.gold+' · Scarlet '+counts.scarlet));
+    card.appendChild(el('span','sc-info',(frozenN?('❄ '+frozenN+' frozen'):'No frozen pieces')));
+    card.appendChild(el('span','sc-info'+(inChk?' check':''),inChk?'♚ King in check':'King not in check'));
+    card.appendChild(el('span','sc-info'+(crossTxt.startsWith('No')?'':' cross'),crossTxt));
+    sc.appendChild(card);
+  }
+  sc.querySelectorAll('.summary-card').forEach(c=>{ c.onclick=()=> setActiveLevel(+c.dataset.level); });
+}
+function pulsePreview(level){
+  const w=document.querySelector('.board-wrap[data-level="'+level+'"]');
+  if(!w) return;
+  w.classList.add('pulse-cross');
+  setTimeout(()=> w.classList.remove('pulse-cross'), 700);
+}
+function postMoveLevelSwitch(lastMove){
+  if(!lastMove) return;
+  if(lastMove.kind==='remoteCapture'){ pulsePreview(2); return; }
+  if(lastMove.from && lastMove.to && lastMove.to.level!==lastMove.from.level){
+    setActiveLevel(lastMove.to.level,{silent:true});
+  }
+}
+function squareEl(level,file,rank){
+  return document.querySelector('#boardsContainer .sq[data-level="'+level+'"][data-file="'+file+'"][data-rank="'+rank+'"]');
+}
+function applyHighlights(state){
+  document.querySelectorAll('.sq').forEach(s=> s.classList.remove('sel','legal','cap','cross','remote','last','frozen','check','demo','inspect','ilegal','icap','icross','iremote'));
+  const frozen=new Set(getFrozenPieceIds(state));
+  for(const id of frozen){ const p=state.pieces[id]; const s=squareEl(p.level,p.file,p.rank); if(s) s.classList.add('frozen'); }
+  const out=getGameOutcome(state);
+  if(out.inCheck){ const k=findKing(state,state.turn); if(k){ const s=squareEl(k.level,k.file,k.rank); if(s) s.classList.add('check'); } }
+  const hist=state.moveHistory;
+  if(App.lastMove){
+    const f=App.lastMove.from, t=App.lastMove.to;
+    const sf=squareEl(f.level,f.file,f.rank); const st=squareEl(t.level,t.file,t.rank);
+    if(sf) sf.classList.add('last'); if(st) st.classList.add('last');
+  }
+  if(App.selectedId && state.pieces[App.selectedId]){
+    const p=state.pieces[App.selectedId];
+    const s=squareEl(p.level,p.file,p.rank); if(s) s.classList.add('sel');
+    if(App.demo){
+      for(const m of generatePseudoMoves(state,App.selectedId)){
+        const ds=squareEl(m.to.level,m.to.file,m.to.rank); if(ds) ds.classList.add('demo');
+      }
+    }
+    for(const m of App.legal){
+      const ds=squareEl(m.to.level,m.to.file,m.to.rank); if(!ds) continue;
+      if(m.kind==='remoteCapture') ds.classList.add('remote');
+      else if(m.capturedPieceId) ds.classList.add('cap');
+      else if(m.to.level!==p.level) ds.classList.add('cross');
+      else ds.classList.add('legal');
+    }
+  }
+  if(App.inspectingId && state.pieces[App.inspectingId] && !App.selectedId){
+    const p=state.pieces[App.inspectingId];
+    const s=squareEl(p.level,p.file,p.rank); if(s) s.classList.add('inspect');
+    for(const m of App.inspectLegal){
+      const ds=squareEl(m.to.level,m.to.file,m.to.rank); if(!ds) continue;
+      if(m.kind==='remoteCapture') ds.classList.add('iremote');
+      else if(m.capturedPieceId) ds.classList.add('icap');
+      else if(m.to.level!==p.level) ds.classList.add('icross');
+      else ds.classList.add('ilegal');
+    }
+  }
+  updateCrossLayerHints();
+}
+
+function currentMoveState(){ return App.localState; }
+function isMyTurn(){
+  if(App.mode==='local') return true;
+  return App.localState && App.seat && App.localState.turn===App.seat;
+}
+function onSquareClick(level,file,rank){
+  const state=currentMoveState(); if(!state) return;
+  const coord={level,file,rank};
+  const piece=pieceAt(state,coord);
+  const them=opponentColor();
+  if(App.selectedId){
+    const move=App.legal.find(m=> m.to.level===level&&m.to.file===file&&m.to.rank===rank);
+    if(move){ commitMove(move); return; }
+    if(piece && piece.color===state.turn && !isFrozen(state,piece.id)){
+      selectPiece(piece.id); return;
+    }
+    if(piece && them && piece.color===them){ inspectPiece(piece.id); return; }
+    clearSelection(); return;
+  }
+  if(piece){
+    if(them && piece.color===them){ inspectPiece(piece.id); return; }
+    selectPiece(piece.id); return;
+  }
+}
+function selectPiece(pieceId){
+  const state=currentMoveState(); if(!state) return;
+  const p=state.pieces[pieceId]; if(!p) return;
+  App.selectedId=pieceId; App.demo=false; App.legal=[];
+  App.inspectingId=null; App.inspectLegal=[];
+  if(p.color===state.turn && !isFrozen(state,pieceId)){
+    App.legal=generateLegalMoves(state,pieceId);
+  }
+  updateSelectedCard();
+  applyHighlights(state);
+  announce(p.color+' '+p.type+' selected at '+coordToNotation(p)+(App.legal.length?(' — '+App.legal.length+' legal move'+(App.legal.length>1?'s':'')):' (not its turn / cannot move)'));
+}
+function inspectPiece(pieceId){
+  const state=currentMoveState(); if(!state) return;
+  const p=state.pieces[pieceId]; if(!p) return;
+  const them=opponentColor();
+  if(!them || p.color!==them) return;
+  App.selectedId=null; App.legal=[]; App.demo=false;
+  App.inspectingId=pieceId;
+  const sim=cloneState(state); sim.turn=p.color;
+  App.inspectLegal=generateLegalMoves(sim,pieceId);
+  $('#btnDemo').disabled=true;
+  updateSelectedCard();
+  applyHighlights(state);
+  announce('Inspecting '+p.color+' '+p.type+' at '+coordToNotation(p)+' — '+App.inspectLegal.length+' move'+(App.inspectLegal.length!==1?'s':'')+' (inspection only).');
+}
+function clearSelection(){
+  App.selectedId=null; App.legal=[]; App.demo=false;
+  App.inspectingId=null; App.inspectLegal=[];
+  updateSelectedCard(); applyHighlights(currentMoveState());
+  $('#btnDemo').disabled=true;
+}
+function updateSelectedCard(){
+  const card=$('#selectedCard');
+  const state=currentMoveState();
+  $('#btnDemo').textContent=App.demo?'Hide example moves':'Show example moves';
+  if(App.inspectingId && state && state.pieces[App.inspectingId]){
+    const p=state.pieces[App.inspectingId];
+    const frozen=isFrozen(state,p.id);
+    card.innerHTML='<div class="pc">'+tokenHTML(p)+'<div><strong>'+cap(p.color)+' '+cap(p.type)+'</strong> ('+TYPE_ABBR[p.type]+') · '+coordToNotation(p)+' · '+LEVEL_NAME[p.level]+' · '+(frozen?'Frozen':'active')+'</div></div>'
+      +'<div class="desc">'+(PIECE_RULES[p.type]||'')+'</div>'
+      +'<div class="desc">Opponent piece — inspection only. '+App.inspectLegal.length+' legal move'+(App.inspectLegal.length!==1?'s':'')+' if it were '+p.color+"'s turn. You cannot move this piece.</div>";
+    card.appendChild(viewRulesBtn(p.type));
+    card.insertAdjacentHTML('beforeend', pieceDiagramHTML(p.type, p.color));
+    $('#btnDemo').disabled=true;
+    return;
+  }
+  if(!App.selectedId||!state||!state.pieces[App.selectedId]){ card.innerHTML='<p class="note">Click a piece to see its rules. Click an opponent piece to inspect its moves.</p>'; $('#btnDemo').disabled=true; return; }
+  const p=state.pieces[App.selectedId];
+  const frozen=isFrozen(state,p.id);
+  card.innerHTML='<div class="pc">'+tokenHTML(p)+'<div><strong>'+cap(p.color)+' '+cap(p.type)+'</strong> ('+TYPE_ABBR[p.type]+')<br>'+coordToNotation(p)+' · '+LEVEL_NAME[p.level]+' · '+(frozen?'Frozen':'active')+'</div></div>'
+    +'<div class="desc">'+(PIECE_RULES[p.type]||'')+'</div>'
+    +'<div class="desc">Legal moves this turn: '+App.legal.length+'.</div>';
+  card.appendChild(viewRulesBtn(p.type));
+  card.insertAdjacentHTML('beforeend', pieceDiagramHTML(p.type, p.color));
+  $('#btnDemo').disabled=false;
+}
+function toggleDemo(){
+  const state=currentMoveState(); if(!App.selectedId||!state) return;
+  App.demo=!App.demo; applyHighlights(state);
+  $('#btnDemo').textContent=App.demo?'Hide example moves':'Show example moves';
+}
+
+function commitMove(move){
+  const state=currentMoveState();
+  const notation=moveToNotation(state,move);
+  clearSelection();
+  if(App.mode==='online'){
+    submitOnlineMove(move,notation);
+  } else {
+    const r=localCommitMove(state,move,state.version);
+    if(!r.ok){ showInfo('Move rejected', r.reason); return; }
+    App.localState=r.state;
+    App.lastMove=move;
+    afterMove(r.state,notation);
+  }
+}
+function afterMove(state,notation){
+  clearSelection();
+  renderBoards(state);
+  renderHistory(state);
+  updateStatus();
+  postMoveLevelSwitch(App.lastMove);
+  const out=getGameOutcome(state);
+  if(out.over){
+    if(out.winner) announce((out.winner==='gold'?'Gold':'Scarlet')+' wins by '+out.reason+'.', true);
+    else announce('Game over: '+out.reason, true);
+  } else if(out.inCheck){
+    announce((state.turn==='gold'?'Gold':'Scarlet')+' is in check.', true);
+  } else {
+    announce(notation+' — '+(state.turn==='gold'?'Gold':'Scarlet')+' to move.');
+  }
+}
+
+function renderHistory(state){
+  const v=$('#historyView'); const h=state.moveHistory;
+  if(!h.length){ v.innerHTML='<p class="note">No moves yet.</p>'; return; }
+  let rows=''; let n=1; let gold='',scar='';
+  const tbl=el('table');
+  const tb=el('tbody');
+  let turnNo=1; let g=null;
+  for(const mv of h){
+    if(mv.color==='gold'){ g=mv; }
+    else {
+      const tr=el('tr');
+      const gtxt=g?g.notation:'…';
+      tr.appendChild(el('td','n',String(turnNo)));
+      tr.appendChild(el('td','',gtxt));
+      tr.appendChild(el('td','',mv.notation));
+      tb.appendChild(tr); g=null; turnNo++;
+    }
+  }
+  if(g){ const tr=el('tr'); tr.appendChild(el('td','n',String(turnNo))); tr.appendChild(el('td','',g.notation)); tr.appendChild(el('td','')); tb.appendChild(tr); }
+  v.innerHTML=''; v.appendChild(tbl); tbl.appendChild(tb);
+}
+function updateStatus(){
+  const state=currentMoveState(); if(!state) return;
+  const out=getGameOutcome(state);
+  const sl=$('#statusLine');
+  const turnName=state.turn==='gold'?'Gold':'Scarlet';
+  if(out.over){
+    sl.textContent=out.winner?( (out.winner==='gold'?'Gold':'Scarlet')+' wins by '+out.reason):( 'Game over: '+out.reason);
+    sl.className='status-line win';
+  } else {
+    sl.textContent=turnName+' to move'+(out.inCheck?' — CHECK':'');
+    sl.className='status-line'+(out.inCheck?' check':'');
+  }
+  $('#modeBadge').textContent='Online';
+  $('#modeBadge').className='badge online';
+}
+
+function buildLegend(){
+  const items=[
+    ['sel','Selected origin'],['legal','Normal move'],['cap','Capture'],['cross','Cross-level move'],['remote','Dragon remote target'],
+    ['last','Last move'],['frozen','Frozen piece'],['check','King in check'],
+    ['inspect','Inspected opponent'],['ilegal','Opponent move'],['icap','Opponent capture'],['icross','Opponent cross-level'],['iremote','Opponent remote target']
+  ];
+  const g=$('#legendGrid'); g.innerHTML='';
+  for(const [k,label] of items){ const d=el('div','li'); d.innerHTML='<span class="sw '+k+'"></span><span>'+label+'</span>'; g.appendChild(d); }
+}
+function buildPieceGuide(){
+  const g=$('#pieceGuide'); g.innerHTML='';
+  g.classList.add('grid');
+  const order=['sylph','griffon','dragon','warrior','oliphant','unicorn','hero','thief','cleric','mage','king','paladin','dwarf','basilisk','elemental'];
+  const byType={}; for(const k of ['sky','ground','under']) for(const e of PIECE_GUIDE[k]) byType[e.t]=e;
+  const legend=el('div','pdiag-legend');
+  legend.appendChild(el('span','lk y','<span class="mt">Y</span> origin'));
+  legend.appendChild(el('span','lk m','<span class="mt">M</span> move-only'));
+  legend.appendChild(el('span','lk c','<span class="mt">C</span> capture-only (incl. Dragon remote)'));
+  legend.appendChild(el('span','lk mc','<span class="mt">MC</span> move-or-capture'));
+  g.appendChild(legend);
+  for(const t of order){
+    const e=byType[t]; if(!e) continue;
+    const realms=(PIECE_LEVELS[t]||[]).slice().sort((a,b)=>b-a).map(l=>LEVEL_NAME[l]).join(' · ');
+    const card=el('details','piece-entry pcard'); card.dataset.type=t;
+    const sum=el('summary','pcard-sum');
+    sum.innerHTML='<span class="pcard-tok">'+tokenHTML({id:'',color:'gold',type:t,level:2,file:0,rank:0})+'</span>'
+      +'<span class="pname">'+e.name+'</span>'
+      +'<span class="pabbr">'+TYPE_ABBR[t]+'</span>'
+      +'<span class="pcard-realm">'+escapeHTML(realms)+'</span>';
+    card.appendChild(sum);
+    const body=el('div','pcard-body');
+    body.appendChild(el('p','desc',e.d));
+    body.appendChild(el('div','pdiag-wrap',pieceDiagramHTML(t,'gold')));
+    card.appendChild(body);
+    g.appendChild(card);
+  }
+  if(!App.guideWired){
+    App.guideWired=true;
+    $('#pieceSearch').addEventListener('input',ev=>{
+      const q=ev.target.value.toLowerCase();
+      document.querySelectorAll('#pieceGuide .piece-entry').forEach(en=>{
+        en.style.display = en.textContent.toLowerCase().includes(q)?'':'none';
+      });
+    });
+  }
+}
+
+const PIECE_LEVELS = {
+  sylph:[3,2], griffon:[3,2], dragon:[3],
+  warrior:[2], oliphant:[2], unicorn:[2], hero:[2,1,3], thief:[2],
+  cleric:[2,1,3], mage:[2,1,3], king:[2,1,3], paladin:[2,1,3],
+  dwarf:[1,2], basilisk:[1], elemental:[1,2]
+};
+
+function classifyCapabilities(type, color, originLevel, cf, cr){
+  const f0=2, f1=10, r0=1, r1=7;     // 9-file × 7-rank window
+  const caps = new Map();
+  let promotes = false;
+  const keyOf = (l,f,r)=> l+'_'+f+'_'+r;
+  const s0 = emptyState(color);
+  addP(s0,'p',color,type,originLevel,cf,cr);
+  for(const m of generatePseudoMoves(s0,'p')){
+    if(!inBounds(m.to.level,m.to.file,m.to.rank)) continue;
+    if(m.to.level===originLevel && m.to.file===cf && m.to.rank===cr) continue;
+    const k = keyOf(m.to.level,m.to.file,m.to.rank);
+    const e = caps.get(k) || {move:false, cap:false};
+    e.move = true; caps.set(k, e);
+    if(m.promotion) promotes = true;
+  }
+  const enemyColor = opp(color);
+  for(let L=1; L<=3; L++){
+    for(let file=f0; file<=f1; file++){
+      for(let rank=r0; rank<=r1; rank++){
+        if(L===originLevel && file===cf && rank===cr) continue;
+        const s1 = emptyState(color);
+        addP(s1,'p',color,type,originLevel,cf,cr);
+        addP(s1,'e',enemyColor,'warrior',L,file,rank);
+        for(const m of generatePseudoMoves(s1,'p')){
+          if(!m.capturedPieceId) continue;
+          if(m.to.level!==L || m.to.file!==file || m.to.rank!==rank) continue;
+          const k = keyOf(L,file,rank);
+          const e = caps.get(k) || {move:false, cap:false};
+          e.cap = true; caps.set(k, e);
+          break;
+        }
+      }
+    }
+  }
+  const out = new Map();
+  for(const [k,e] of caps){
+    out.set(k, (e.move && e.cap) ? 'MC' : e.cap ? 'C' : 'M');
+  }
+  return { caps: out, promotes };
+}
+
+function pieceDiagramHTML(type, color){
+  const cf=6, cr=4;
+  const f0=2, f1=10, r0=1, r1=7;
+  const occupiable = PIECE_LEVELS[type] || [2];
+  let html='<div class="pdiag">';
+  const crossTargetLevels = new Set();
+  const crossTargets = new Map();
+  for(const L of occupiable){
+    const { caps, promotes } = classifyCapabilities(type, color, L, cf, cr);
+    const same = new Map();
+    const crossByLevel = new Map();
+    for(const [k,cls] of caps){
+      const [lv,ff,rr] = k.split('_').map(Number);
+      if(lv===L) same.set(ff+'_'+rr, cls);
+      else {
+        if(!crossByLevel.has(lv)) crossByLevel.set(lv, new Map());
+        crossByLevel.get(lv).set(ff+'_'+rr, cls);
+      }
+    }
+    html += renderMiniBoard(L, color, type, cf, cr, f0, f1, r0, r1, same, true);
+    if(crossByLevel.size){
+      const parts=[];
+      for(const [Ld, m] of crossByLevel){
+        const n = m.size;
+        const tally = {M:0,C:0,MC:0};
+        for(const cls of m.values()) tally[cls] = (tally[cls]||0)+1;
+        const types = Object.keys(tally).filter(k=>tally[k]>0).map(k=>k+'×'+tally[k]).join(' ');
+        parts.push(LEVEL_NAME[L]+' → '+LEVEL_NAME[Ld]+': '+n+' target'+(n>1?'s':'')+(types?' ('+types+')':''));
+        if(!occupiable.includes(Ld)){
+          if(!crossTargets.has(Ld)) crossTargets.set(Ld, new Map());
+          for(const [fr,cls] of m) crossTargets.get(Ld).set(fr, cls);
+          crossTargetLevels.add(Ld);
+        }
+      }
+      html += '<div class="pdiag-cross">'+parts.join(' · ')+'</div>';
+    }
+    if(promotes) html += '<div class="pdiag-note">Promotes on the far rank.</div>';
+  }
+  for(const Ld of [...crossTargets.keys()].sort((a,b)=>b-a)){
+    html += renderMiniBoard(Ld, color, type, cf, cr, f0, f1, r0, r1, crossTargets.get(Ld), false);
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderMiniBoard(L, color, type, cf, cr, f0, f1, r0, r1, markers, withOrigin){
+  const MARK = { M:'M', C:'C', MC:'MC', Y:'Y' };
+  let html='<div class="pdiag-board lvl'+L+'">';
+  html+='<div class="pdiag-lvl">'+(withOrigin?'':'targets on ')+LEVEL_NAME[L]+' · L'+L+'</div>';
+  html+='<div class="pdiag-grid" role="img" aria-label="'+LEVEL_NAME[L]+' movement map for '+type+'">';
+  for(let rank=r1; rank>=r0; rank--){
+    for(let file=f0; file<=f1; file++){
+      const isOrigin = withOrigin && file===cf && rank===cr;
+      const cls = markers.get(file+'_'+rank);
+      let c='psq '+(((file+rank)%2===0)?'light':'dark');
+      let inner='';
+      let al='';
+      if(isOrigin){ c+=' has-piece'; inner='<span class="ptok '+color+'">'+emblemSVG(type)+'<span class="abbr">'+TYPE_ABBR[type]+'</span></span>'; al='origin (Y)'; }
+      else if(cls){ c+=' mk mk-'+cls.toLowerCase(); inner='<span class="mk-txt">'+MARK[cls]+'</span>'; al = cls==='M'?'move':cls==='C'?'capture':'move or capture'; }
+      html+='<div class="'+c+'"'+(al?' aria-label="'+al+'"':'')+'>'+inner+'</div>';
+    }
+  }
+  html+='</div></div>';
+  return html;
+}
+
+async function apiJSON(path, opts={}){
+  const res = await fetch(path, {
+    method: opts.method||'GET',
+    headers: opts.body ? {'Content-Type':'application/json'} : undefined,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+    credentials: 'same-origin',
+  });
+  let data=null; try{ data = await res.json(); }catch(e){}
+  return { ok: res.ok, status: res.status, data };
+}
+
+function setProfile(user){
+  App.profile = user||null;
+  const btn=$('#profileBtn');
+  if(user){ btn.textContent = user.username; btn.setAttribute('aria-label','Profile: '+user.username); }
+  else { btn.textContent='Sign in'; btn.setAttribute('aria-label','Open profile to sign in'); }
+  applyAuthGate();
+}
+
+async function restoreSession(){
+  try{
+    const r = await apiJSON('/api/auth/me');
+    setProfile(r.ok && r.data ? r.data.user : null);
+  }catch(e){}
+}
+
+function openProfile(){
+  const d=$('#profileDialog');
+  $('#profileDetail').classList.add('hidden');
+  $('#profileAccount').querySelector('.profile-scroll').classList.remove('hidden');
+  if(App.profile){ renderProfileAccount(); void loadProfileHistory(App.historyPage); }
+  else { setAuthMode(App.authMode||'login'); }
+  if(!d.open) d.showModal();
+  setTimeout(()=>{ (App.profile?$('#logoutBtn'):$('#authUser')).focus(); }, 30);
+}
+
+function setAuthMode(mode){
+  App.authMode = mode;
+  const signIn = mode==='login';
+  $('#tabSignIn').setAttribute('aria-selected', String(signIn));
+  $('#tabRegister').setAttribute('aria-selected', String(!signIn));
+  $('#authSubmit').textContent = signIn?'Sign in':'Register';
+  $('#authPass').setAttribute('autocomplete', signIn?'current-password':'new-password');
+  $('#profileDialogTitle').textContent = signIn?'Sign in':'Create account';
+  $('#profileErr').textContent='';
+}
+
+async function submitAuth(){
+  if(App.authPending) return;
+  const username = $('#authUser').value.trim();
+  const password = $('#authPass').value;
+  if(!username || !password){ $('#profileErr').textContent='Enter a username and password.'; return; }
+  if(username.length<3 || username.length>20){ $('#profileErr').textContent='Username must be 3–20 characters.'; return; }
+  if(!/^[A-Za-z0-9_-]+$/.test(username)){ $('#profileErr').textContent='Username may only contain letters, digits, _ or -.'; return; }
+  const pwLen=[...password].length;
+  if(pwLen<8 || pwLen>128){ $('#profileErr').textContent='Password must be 8–128 characters.'; return; }
+  App.authPending=true; $('#authSubmit').disabled=true;
+  const errEl=$('#profileErr'); errEl.textContent='';
+  const endpoint = App.authMode==='login' ? '/api/auth/login' : '/api/auth/register';
+  try{
+    const r = await apiJSON(endpoint, { method:'POST', body:{ username, password } });
+    if(r.ok && r.data && r.data.user){
+      setProfile(r.data.user);
+      $('#authPass').value='';
+      $('#authUser').value='';
+      renderProfileAccount();
+      await loadProfileHistory(1);
+    } else {
+      const msg = (r.data && r.data.error && r.data.error.message) || 'Something went wrong. Try again.';
+      errEl.textContent = msg;
+    }
+  }catch(e){ errEl.textContent = 'Network error. Is the server reachable?'; }
+  finally{ App.authPending=false; $('#authSubmit').disabled=false; }
+}
+
+async function doLogout(){
+  if(App.authPending) return;
+  App.authPending=true; $('#logoutBtn').disabled=true;
+  try{ await apiJSON('/api/auth/logout', { method:'POST' }); }catch(e){}
+  setProfile(null);
+  App.history=[]; App.historyPage=1; App.historyTotal=0;
+  $('#profileAccount').classList.add('hidden'); $('#profileAuth').classList.remove('hidden');
+  setAuthMode('login');
+  $('#profileErr').textContent='Signed out. Sign in to play.';
+  $('#logoutBtn').disabled=false;
+  App.authPending=false;
+  resetToLobby();
+}
+
+async function submitChangePassword(){
+  const errEl=$('#cpErr'); if(!errEl) return;
+  const current=$('#cpCurrent').value, next=$('#cpNew').value;
+  if(!current || !next){ errEl.textContent='Enter your current and new passwords.'; return; }
+  if([...current].length<8 || [...current].length>128 || [...next].length<8 || [...next].length>128){
+    errEl.textContent='Passwords must be 8–128 characters.'; return;
+  }
+  if(next===current){ errEl.textContent='New password must differ from the current one.'; return; }
+  const btn=$('#cpSubmit'); btn.disabled=true; errEl.textContent='';
+  try{
+    const r = await apiJSON('/api/auth/change-password', { method:'POST', body:{ currentPassword: current, newPassword: next } });
+    if(r.ok && r.data && r.data.ok){
+      $('#cpCurrent').value=''; $('#cpNew').value='';
+      errEl.textContent='Password updated.';
+      void restoreSession();
+    } else {
+      errEl.textContent = (r.data && r.data.error && r.data.error.message) || 'Could not update password.';
+    }
+  }catch(e){ errEl.textContent='Network error. Is the server reachable?'; }
+  finally{ btn.disabled=false; }
+}
+
+function renderProfileAccount(){
+  $('#profileAuth').classList.add('hidden');
+  $('#profileAccount').classList.remove('hidden');
+  const u=App.profile; if(!u) return;
+  $('#profileName').textContent = u.username;
+  $('#profRating').textContent = String(u.rating);
+  $('#profGames').textContent = String(u.gamesPlayed);
+  $('#profWins').textContent = 'W '+u.wins;
+  $('#profDraws').textContent = 'D '+u.draws;
+  $('#profLosses').textContent = 'L '+u.losses;
+}
+
+async function loadProfileHistory(page){
+  if(!App.profile) return;
+  App.historyPage = Math.max(1, page|0);
+  const list=$('#histList'); if(list) list.innerHTML='<div class="hist-empty">Loading…</div>';
+  try{
+    const r = await apiJSON('/api/profile/history?page='+App.historyPage+'&pageSize='+App.historyPageSize);
+    if(!r.ok){ list.innerHTML='<div class="hist-empty">Could not load history.</div>'; return; }
+    App.historyTotal = r.data.total; App.history = r.data.games||[];
+    renderProfileHistory();
+  }catch(e){ list.innerHTML='<div class="hist-empty">Could not load history.</div>'; }
+}
+
+function renderProfileHistory(){
+  const list=$('#histList'); list.innerHTML='';
+  if(!App.history.length){ list.innerHTML='<div class="hist-empty">No completed games yet.</div>'; }
+  for(const g of App.history){
+    const btn=el('button','hist-item'); btn.type='button'; btn.setAttribute('role','listitem');
+    const main=el('div','hist-main');
+    const opp=el('span','hist-opp'); opp.textContent=(g.opponentIsGuest?'Guest: ':'vs ')+g.opponentName;
+    const meta=el('span','hist-meta');
+    const when = g.completedAt ? new Date(g.completedAt).toLocaleString() : '';
+    meta.textContent = cap(g.colour)+' · '+(g.rated?'rated':'unrated')+' · '+(g.resultReason||g.result)+(when?' · '+when:'')+' · '+g.moveCount+' moves';
+    main.appendChild(opp); main.appendChild(meta);
+    const res=el('span','hist-result '+g.result); res.textContent = cap(g.result)+(g.rated && g.ratingChange!=null ? ' ('+(g.ratingChange>=0?'+':'')+g.ratingChange+')' : '');
+    btn.appendChild(main); btn.appendChild(res);
+    btn.onclick=()=>void showGameDetail(g.gameId);
+    list.appendChild(btn);
+  }
+  const pages = Math.max(1, Math.ceil(App.historyTotal / App.historyPageSize));
+  const pager=$('#histPager');
+  if(pages>1){ pager.classList.remove('hidden'); $('#histPrev').disabled = App.historyPage<=1; $('#histNext').disabled = App.historyPage>=pages; $('#histPageInfo').textContent = 'Page '+App.historyPage+' of '+pages+' ('+App.historyTotal+')'; }
+  else pager.classList.add('hidden');
+}
+
+async function showGameDetail(gameId){
+  const detailEl=$('#profileDetail');
+  $('#profileAccount').querySelector('.profile-scroll').classList.add('hidden');
+  detailEl.classList.remove('hidden');
+  detailEl.innerHTML='<p class="note">Loading game…</p>';
+  try{
+    const r = await apiJSON('/api/games/'+gameId);
+    if(!r.ok || !r.data){ detailEl.innerHTML='<p class="note">Could not load this game.</p><div class="actions"><button id="detailBack" type="button">Back</button></div>'; $('#detailBack').onclick=closeGameDetail; return; }
+    renderGameDetail(detailEl, r.data);
+  }catch(e){ detailEl.innerHTML='<p class="note">Could not load this game.</p><div class="actions"><button id="detailBack" type="button">Back</button></div>'; $('#detailBack').onclick=closeGameDetail; }
+}
+
+function closeGameDetail(){
+  $('#profileDetail').classList.add('hidden');
+  $('#profileAccount').querySelector('.profile-scroll').classList.remove('hidden');
+}
+
+function fmtRating(before, after){
+  if(before==null || after==null) return '—';
+  const ch = after - before;
+  return before+' → '+after+' ('+(ch>=0?'+':'')+ch+')';
+}
+
+function fmtTs(ms){ if(!ms) return '—'; try{ return new Date(ms).toLocaleString(); }catch(e){ return String(ms); } }
+
+function renderGameDetail(container, d){
+  const g=d.game, moves=d.moves||[], finalState=d.finalState;
+  const me = App.profile ? App.profile.id : null;
+  const isGold = g.goldUserId===me;
+  const myColour = isGold ? 'gold' : 'scarlet';
+  const myBefore = isGold ? g.goldRatingBefore : g.scarletRatingBefore;
+  const myAfter = isGold ? g.goldRatingAfter : g.scarletRatingAfter;
+  const oppName = isGold ? g.scarletDisplayName : g.goldDisplayName;
+  const result = g.winnerColour==null ? 'Draw' : (g.winnerColour===myColour ? 'Win' : 'Loss');
+
+  let html = '<div class="profile-section-h"><h3>Game #'+g.id+'</h3></div>';
+  html += '<div class="hist-item" style="cursor:default;width:100%"><div class="hist-main">';
+  html += '<span class="hist-opp">'+escapeHTML(oppName||'Guest')+'</span>';
+  html += '<span class="hist-meta">'+cap(myColour)+' vs '+escapeHTML(oppName||'Guest')+' · '+(g.rated?'rated':'unrated')+' · '+escapeHTML(g.resultReason||result.toLowerCase())+'</span>';
+  html += '</div><span class="hist-result '+(result.toLowerCase())+'">'+result+'</span></div>';
+  if(g.rated){
+    html += '<p class="note" style="margin:8px 0">Your Elo: '+escapeHTML(fmtRating(myBefore, myAfter))+'</p>';
+  }
+  html += '<div class="profile-section-h"><h3>Players</h3></div>';
+  html += '<p class="note" style="margin:0 0 4px">Gold: '+escapeHTML(g.goldDisplayName||'Guest')+'</p>';
+  html += '<p class="note" style="margin:0 0 10px">Scarlet: '+escapeHTML(g.scarletDisplayName||'Guest')+'</p>';
+  html += '<p class="note" style="margin:0 0 10px">Started: '+escapeHTML(fmtTs(g.startedAt))+'<br>Completed: '+escapeHTML(fmtTs(g.completedAt))+'</p>';
+
+  html += '<div class="profile-section-h"><h3>Moves ('+moves.length+')</h3></div>';
+  if(moves.length){
+    html += '<div class="movelist">';
+    for(const m of moves){ html += '<div class="mv"><span class="ply">'+m.ply+'</span><span>'+escapeHTML(m.notation||'')+'</span></div>'; }
+    html += '</div>';
+  } else { html += '<p class="note">No moves recorded.</p>'; }
+
+  if(finalState && finalState.pieces){
+    html += '<div class="profile-section-h" style="margin-top:14px"><h3>Final board</h3></div>';
+    html += '<div class="miniboards" id="miniboards"></div>';
+  }
+  html += '<div class="actions"><button id="detailBack" type="button">Back</button></div>';
+  container.innerHTML = html;
+  const back=$('#detailBack'); if(back) back.onclick=closeGameDetail;
+  if(finalState && finalState.pieces){
+    const mb=$('#miniboards'); if(mb) renderFinalBoard(mb, finalState);
+  }
+}
+
+function renderFinalBoard(container, finalState){
+  container.innerHTML='';
+  const pieces = finalState.pieces||{};
+  const byCell = {};
+  for(const id in pieces){ const p=pieces[id]; byCell[p.level+' '+p.file+' '+p.rank]=p; }
+  for(const level of ALL_LAYER_ORDER){
+    const lbl=el('div','miniboard-label'); lbl.textContent=LEVEL_NAME[level]+' (L'+level+')';
+    container.appendChild(lbl);
+    const grid=el('div','miniboard lvl'+level); grid.className='miniboard lvl'+level;
+    for(let drow=0; drow<8; drow++){
+      for(let dcol=0; dcol<12; dcol++){
+        const file=dcol, rank=7-drow;
+        const sq=el('div','msq '+(((file+rank)%2===0)?'light':'dark'));
+        const p = byCell[level+' '+file+' '+rank];
+        if(p){ const tok=el('span','tok '+p.color); tok.innerHTML=emblemSVG(p.type)+'<span class="abbr">'+TYPE_ABBR[p.type]+'</span>'; sq.appendChild(tok); }
+        sq.style.gridRow=(drow+1); sq.style.gridColumn=(dcol+1);
+        grid.appendChild(sq);
+      }
+    }
+    container.appendChild(grid);
+  }
+}
+
+function applyProfileRefresh(p){
+  if(!p) return;
+  if(App.profile && App.profile.id===p.id){
+    setProfile(Object.assign({}, App.profile, p));
+    if($('#profileDialog').open && !$('#profileAccount').classList.contains('hidden') && $('#profileDetail').classList.contains('hidden')){
+      renderProfileAccount();
+    }
+  }
+}
+
+function initSocket(){
+  if(typeof io === 'undefined'){ App.connected=false; App.socket=null; return false; }
+  try{
+    const socket = io({path:'/socket.io/', transports:['websocket','polling'], reconnection:true, reconnectionAttempts:Infinity});
+    App.socket = socket;
+    socket.on('connect', ()=>{
+      App.connected=true; updateConn();
+      App.bootSocketReady=true; afterBootReady();
+      if(App.booted) tryResume();
+    });
+    socket.on('disconnect', ()=>{ App.connected=false; updateConn(); });
+    socket.on('connect_error', ()=>{ App.connected=false; updateConn(); });
+    socket.on('game:state', (pub)=>{ applyRemoteState(pub); });
+    socket.on('game:error', (err)=>{ showInfo('Server error', (err&&err.message)||'Something went wrong.'); });
+    socket.on('profile:refresh', (p)=>{ applyProfileRefresh(p); });
+    socket.on('matchmaking:status', (s)=>{ applyMatchStatus(s); });
+    socket.on('matchmaking:matched', (m)=>{
+      if(!m) return;
+      App.mode='online'; App.queued=false;
+      App.code=m.code; App.seat=m.seat; App.sessionToken=m.token;
+      App.rematchCount=(m.state&&m.state.rematchCount)||0;
+      App.myName=(App.profile&&App.profile.username)||App.myName;
+      persistSession(m.code, m.token);
+      hideMatchStatus(); hideLobbyActions();
+      applyRemoteState(m.state);
+      announce('Match found! '+(m.seat==='gold'?'Gold':'Scarlet')+' to move.');
+    });
+    return true;
+  }catch(e){
+    console.warn('Socket init failed:',e);
+    App.connected=false; App.socket=null; return false;
+  }
+}
+function updateConn(){
+  const dot=$('#connDot'), txt=$('#connText');
+  const badge=$('#modeBadge');
+  if(!App.profile){ dot.className='dot off'; txt.textContent='Signed out'; if(badge) badge.classList.add('hidden'); return; }
+  if(badge){ badge.classList.remove('hidden'); badge.textContent='Online'; badge.className='badge online'; }
+  dot.className='dot '+(App.connected?'on':'wait');
+  txt.textContent=App.connected?'Connected':'Reconnecting…';
+}
+
+function persistSession(code,token){
+  try{ localStorage.setItem('dc_session', JSON.stringify({code,token})); }catch(e){}
+}
+function clearSession(){ try{ localStorage.removeItem('dc_session'); }catch(e){} }
+function loadSession(){ try{ return JSON.parse(localStorage.getItem('dc_session')||'null'); }catch(e){ return null; } }
+
+function applyAuthGate(){
+  const signedIn = !!App.profile;
+  const inGame = !!App.code && !!App.sessionToken;
+  $('#authGate').classList.toggle('hidden', signedIn);
+  $('#lobbyPanel').classList.toggle('hidden', !signedIn || inGame);
+  $('#gamePanel').classList.toggle('hidden', !inGame);
+  $('#boardControls').classList.toggle('hidden', !inGame);
+  $('#boardsContainer').classList.toggle('hidden', !inGame);
+  $('#summaryCards').classList.toggle('hidden', !inGame);
+  if(!inGame){ $('#btnRematch').classList.add('hidden'); $('#btnLeaveGame').classList.add('hidden'); }
+  if(signedIn && !inGame) showLobbyActions();
+  updateConn();
+}
+function showLobbyActions(){
+  $('#matchStatus').classList.add('hidden');
+  $('#hostWait').classList.add('hidden');
+  $('#codeBox').classList.add('hidden');
+  $('#btnCancelMatch').classList.add('hidden');
+  $('#btnFindMatch').classList.remove('hidden');
+  $('#lobbyPanel').classList.remove('hidden');
+}
+function hideLobbyActions(){ $('#lobbyPanel').classList.add('hidden'); }
+
+function applyMatchStatus(s){
+  if(!App.queued) return;
+  const box=$('#matchStatus'); if(!box) return;
+  box.classList.remove('hidden');
+  const t=$('#matchStatusText');
+  const elapsed = s&&typeof s.elapsedMs==='number' ? Math.round(s.elapsedMs/1000) : 0;
+  const size = s&&typeof s.queueSize==='number' ? s.queueSize : 0;
+  t.textContent = 'Searching for a rated opponent… ' + elapsed + 's elapsed' + (size>1 ? ' · ' + size + ' in queue' : '');
+}
+function hideMatchStatus(){ const box=$('#matchStatus'); if(box) box.classList.add('hidden'); }
+
+function showHostWait(code){
+  $('#hostCode').textContent = code||'';
+  $('#hostWait').classList.remove('hidden');
+  $('#codeBox').classList.remove('hidden'); $('#codeVal').textContent=code||'';
+  $('#lobbyPanel').classList.remove('hidden');
+}
+function hideHostWait(){ $('#hostWait').classList.add('hidden'); $('#codeBox').classList.add('hidden'); }
+
+function applyRemoteState(pub){
+  if(!pub) return;
+  App.inspectingId=null; App.inspectLegal=[];
+  App.selectedId=null; App.legal=[]; App.demo=false;
+  App.code = pub.code;
+  if(typeof pub.rematchCount==='number' && pub.rematchCount > App.rematchCount){
+    const delta = pub.rematchCount - App.rematchCount;
+    for(let i=0;i<delta;i++) App.seat = opp(App.seat);
+    App.rematchCount = pub.rematchCount;
+    App.view = App.seat;
+    const vs=$('#viewSel'); if(vs) vs.value=App.view;
+  }
+  let state;
+  try{ state = deserializeState(pub); }
+  catch(e){ console.error('Bad remote state',e); showInfo('Sync error','Received an invalid game state: '+e.message); return; }
+  App.localState = state;
+  const prevLast = App.lastMove;
+  App.lastMoveStr = (typeof pub.lastMove==='string' && pub.lastMove) ? pub.lastMove : '';
+  if(state.moveHistory.length){
+    const lh=state.moveHistory[state.moveHistory.length-1];
+    const remote=lh.notation && lh.notation.includes('(remote)');
+    App.lastMove = lh.from?{from:lh.from,to:lh.to,kind:remote?'remoteCapture':'move'}:null;
+  } else App.lastMove=null;
+  if(pub.status==='lobby'){
+    hideLobbyActions();
+    showHostWait(pub.code);
+    $('#gamePanel').classList.add('hidden');
+    $('#boardControls').classList.add('hidden');
+    $('#boardsContainer').classList.add('hidden');
+    $('#summaryCards').classList.add('hidden');
+    $('#btnRematch').classList.add('hidden'); $('#btnLeaveGame').classList.add('hidden');
+  } else {
+    hideLobbyActions(); hideHostWait();
+    $('#gamePanel').classList.remove('hidden');
+    $('#boardControls').classList.remove('hidden');
+    $('#boardsContainer').classList.remove('hidden');
+    $('#summaryCards').classList.remove('hidden');
+    const finished = pub.status==='finished' || !!pub.winner;
+    $('#btnRematch').classList.toggle('hidden', !finished);
+    $('#btnLeaveGame').classList.toggle('hidden', !finished);
+  }
+  renderMatchPanel(pub);
+  renderBoards(state); renderHistory(state); updateStatus();
+  if(App.lastMove && (!prevLast || JSON.stringify(prevLast)!==JSON.stringify({from:App.lastMove.from,to:App.lastMove.to,kind:App.lastMove.kind})))
+    postMoveLevelSwitch(App.lastMove);
+  const mine=App.seat, other=opp(mine);
+  $('#btnAcceptDraw').classList.toggle('hidden', !(pub.drawOfferBy && pub.drawOfferBy===other));
+  $('#btnDeclineDraw').classList.toggle('hidden', !(pub.drawOfferBy && pub.drawOfferBy===other));
+  $('#btnDraw').classList.toggle('hidden', pub.status!=='active' || pub.drawOfferBy===mine);
+}
+
+function renderMatchPanel(pub){
+  const mp=$('#matchPanel'); if(!mp) return;
+  const players = pub.players || {};
+  const pieces = pub.pieces || (App.localState && App.localState.pieces) || {};
+  const counts = {gold:0, scarlet:0};
+  for(const id in pieces){ const p=pieces[id]; if(p && counts[p.color]!=null) counts[p.color]++; }
+  const active = (pub.status==='active' && (pub.turn==='gold'||pub.turn==='scarlet')) ? pub.turn : null;
+  function sideHTML(seat){
+    const p=players[seat]||{};
+    const me = App.seat===seat;
+    const name = p.username || 'Waiting…';
+    const rating = (typeof p.rating==='number') ? p.rating+' Elo' : '';
+    const wins = (typeof p.wins==='number') ? p.wins : null;
+    const losses = (typeof p.losses==='number') ? p.losses : null;
+    const record = (wins!=null && losses!=null) ? (wins+'W · '+losses+'L') : '';
+    const connState = p.connected ? '● connected' : '○ reconnecting';
+    const isActive = active===seat;
+    const turnLabel = isActive ? (me ? 'Your turn' : 'To move') : '';
+    return '<div class="mp-name'+(me?' me':'')+'"><span class="mp-role '+seat+'">'+seat+'</span>'+escapeHTML(name)+(me?'<span class="mp-you">You</span>':'')+'</div>'
+      + '<div class="mp-rating">'+escapeHTML(rating)+'</div>'
+      + (record ? '<div class="mp-record">'+escapeHTML(record)+'</div>' : '')
+      + '<div class="mp-pieces">'+counts[seat]+' pieces left</div>'
+      + '<div class="mp-conn '+(p.connected?'on':'off')+'">'+escapeHTML(connState)+'</div>'
+      + (isActive ? '<div class="mp-turn"><span class="mp-turn-icon">♟</span>'+escapeHTML(turnLabel)+'</div>' : '');
+  }
+  function applySide(elId, seat){
+    const sideEl=$('#'+elId); if(!sideEl) return;
+    sideEl.innerHTML = sideHTML(seat);
+    const isActive = active===seat;
+    sideEl.classList.toggle('is-active-turn', !!isActive);
+    if(isActive) sideEl.setAttribute('aria-current','true'); else sideEl.removeAttribute('aria-current');
+  }
+  applySide('mpGold','gold');
+  applySide('mpScarlet','scarlet');
+  const rated = !!pub.rated;
+  const r=$('#mpRated'); r.textContent = rated ? 'Rated' : 'Unranked'; r.className='mp-rated '+(rated?'rated':'unranked');
+  $('#mpLastMove').textContent = App.lastMoveStr ? ('Last: '+App.lastMoveStr) : '';
+}
+function escapeHTML(s){ const d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
+
+const RESUME_ACK_TIMEOUT_MS = 3000;
+const RESUME_TERMINAL_CODES = new Set(['no-room','room-not-found','bad-token','token-invalid','bad-code','session-invalid']);
+function tryResume(){
+  const s=loadSession();
+  if(!s || !s.code || !s.token || !App.socket) return;
+  if(App.resumeInFlight) return;            // dedupe simultaneous resumes
+  App.resumeInFlight=true;
+  let settled=false;
+  const timer=setTimeout(()=>{
+    if(settled) return; settled=true; App.resumeInFlight=false;
+    updateConn();
+  }, RESUME_ACK_TIMEOUT_MS);
+  App.socket.emit('game:resume', {code:s.code, token:s.token}, (r)=>{
+    if(settled) return; settled=true; clearTimeout(timer); App.resumeInFlight=false;
+    if(r && r.ok){
+      App.mode='online'; App.code=r.data.code; App.seat=r.data.seat; App.sessionToken=r.data.token;
+      App.rematchCount = r.data.state.rematchCount||0;
+      persistSession(r.data.code, r.data.token);
+      applyRemoteState(r.data.state);
+    } else {
+      const code = r && r.error && r.error.code;
+      if(RESUME_TERMINAL_CODES.has(code)){
+        if(App.code){ showInfo('Connection lost','The game no longer exists or your session expired.'); resetToLobby(); }
+        clearSession();
+      } else {
+        updateConn();
+      }
+    }
+  });
+}
+
+async function hostGame(){
+  if(!requireAuthAndSocket()) return;
+  const m=$('#lobbyMsg'); if(m) m.textContent='';
+  App.socket.emit('game:create', (r)=>{
+    if(r&&r.ok){
+      App.mode='online'; App.code=r.data.code; App.seat=r.data.seat; App.sessionToken=r.data.token;
+      App.rematchCount=r.data.state.rematchCount||0;
+      persistSession(r.data.code, r.data.token);
+      applyRemoteState(r.data.state);
+      announce('Game hosted. Code '+r.data.code+' — share it with your opponent.');
+    } else {
+      showInfo('Cannot host', (r&&r.error&&r.error.message)||'Could not create a game.');
+    }
+  });
+}
+async function joinGame(){
+  if(!requireAuthAndSocket()) return;
+  const code=($('#joinCode').value||'').toUpperCase().trim();
+  if(!/^[A-Z2-9]{6}$/.test(code)){ showInfo('Invalid code','Enter a 6-character game code.'); return; }
+  const m=$('#lobbyMsg'); if(m) m.textContent='';
+  App.socket.emit('game:join', {code}, (r)=>{
+    if(r&&r.ok){
+      App.mode='online'; App.code=r.data.code; App.seat=r.data.seat; App.sessionToken=r.data.token;
+      App.rematchCount=r.data.state.rematchCount||0;
+      persistSession(r.data.code, r.data.token);
+      applyRemoteState(r.data.state);
+      announce('Joined game '+r.data.code);
+    } else {
+      const msg=(r&&r.error&&r.error.message)||'Cannot join.';
+      showInfo('Cannot join', msg);
+      if(m) m.textContent=msg;
+    }
+  });
+}
+async function findMatch(){
+  if(!requireAuthAndSocket()) return;
+  if(App.queued) return;
+  const m=$('#lobbyMsg'); if(m) m.textContent='';
+  App.queued=true;
+  $('#btnFindMatch').classList.add('hidden');
+  $('#btnCancelMatch').classList.remove('hidden');
+  App.socket.emit('matchmaking:join', (r)=>{
+    if(!r||!r.ok){
+      App.queued=false;
+      $('#btnCancelMatch').classList.add('hidden');
+      $('#btnFindMatch').classList.remove('hidden');
+      hideMatchStatus();
+      showInfo('Matchmaking', (r&&r.error&&r.error.message)||'Could not enter the queue.');
+      return;
+    }
+    if(r.data && r.data.queued===false){ App.queued=false; $('#btnCancelMatch').classList.add('hidden'); $('#btnFindMatch').classList.remove('hidden'); hideMatchStatus(); return; }
+    applyMatchStatus(null);
+  });
+}
+async function cancelMatch(){
+  if(!App.socket) return;
+  App.queued=false;
+  if(App.socket) App.socket.emit('matchmaking:cancel', ()=>{});
+  hideMatchStatus();
+  $('#btnCancelMatch').classList.add('hidden');
+  $('#btnFindMatch').classList.remove('hidden');
+}
+async function cancelHost(){
+  if(App.code && App.sessionToken && App.socket){
+    const code=App.code, token=App.sessionToken;
+    App.socket.emit('game:leave', {code, token}, ()=>{});
+  }
+  resetToLobby();
+}
+
+function requireAuthAndSocket(){
+  if(!App.profile){ openProfile(); return false; }
+  if(!App.socket || !App.connected){ showInfo('Offline','Multiplayer server unavailable. Reconnecting…'); return false; }
+  return true;
+}
+
+function resetToLobby(){
+  App.code=null; App.seat=null; App.sessionToken=null; App.localState=null; App.rematchCount=0; App.queued=false;
+  clearSession();
+  $('#btnRematch').classList.add('hidden'); $('#btnLeaveGame').classList.add('hidden');
+  hideHostWait(); hideMatchStatus();
+  App.localState=createInitialState(); App.activeLevel=2; clearSelection();
+  renderBoards(App.localState);
+  applyAuthGate();
+}
+
+async function submitOnlineMove(move,notation){
+  if(App.pending) return;
+  if(!App.code||!App.sessionToken){ showInfo('Offline','Not connected to a game.'); return; }
+  App.pending=true;
+  const expectedVersion = App.localState ? App.localState.version : 0;
+  const payload = {code:App.code, token:App.sessionToken, expectedVersion, pieceId:move.pieceId, kind:move.kind, from:move.from, to:move.to};
+  try{
+    App.socket.emit('game:move', payload, (r)=>{
+      App.pending=false;
+      if(!r||!r.ok){ showInfo('Move rejected', (r&&r.error&&r.error.message)||'Move rejected.'); }
+      else { App.lastMove={from:move.from,to:move.to,kind:move.kind}; }
+    });
+  }catch(e){ App.pending=false; showInfo('Sync error','Move failed: '+e.message); }
+}
+
+async function resignOnline(){
+  if(!App.code||!App.sessionToken) return;
+  App.socket.emit('game:resign', {code:App.code, token:App.sessionToken}, (r)=>{
+    if(r&&!r.ok) showInfo('Cannot resign', (r.error&&r.error.message)||'');
+  });
+}
+async function offerDraw(){
+  if(!App.code||!App.sessionToken) return;
+  App.socket.emit('draw:offer', {code:App.code, token:App.sessionToken}, (r)=>{
+    if(r&&r.ok) announce('Draw offered.');
+    else if(r&&!r.ok) showInfo('Cannot offer draw', (r.error&&r.error.message)||'');
+  });
+}
+async function answerDraw(accept){
+  if(!App.code||!App.sessionToken) return;
+  App.socket.emit('draw:answer', {code:App.code, token:App.sessionToken, accept}, (r)=>{
+    if(r&&!r.ok) showInfo('Draw', (r.error&&r.error.message)||'');
+  });
+}
+async function rematch(){
+  if(!App.code||!App.sessionToken) return;
+  App.socket.emit('game:rematch', {code:App.code, token:App.sessionToken}, (r)=>{
+    if(r&&r.ok){
+      App.seat=r.data.seat; App.view=App.seat;
+      const vs=$('#viewSel'); if(vs) vs.value=App.view;
+      App.lastMove=null; App.activeLevel=2; clearSelection();
+    } else if(r&&!r.ok){
+      showInfo('Rematch', (r.error&&r.error.message)||'Could not rematch.');
+    }
+  });
+}
+async function leaveGame(){
+  if(App.code&&App.sessionToken){
+    const code=App.code, token=App.sessionToken;
+    App.socket.emit('game:leave', {code, token}, ()=>{});
+  }
+  resetToLobby();
+}
+
+function wire(){
+  $('#btnFindMatch').onclick=findMatch;
+  $('#btnCancelMatch').onclick=cancelMatch;
+  $('#btnCreate').onclick=hostGame;
+  $('#btnJoin').onclick=joinGame;
+  $('#btnCancelHost').onclick=cancelHost;
+  $('#btnSignInToPlay').onclick=()=>openProfile();
+  $('#copyCode').onclick=()=>{ navigator.clipboard?.writeText(App.code||''); announce('Code copied'); };
+  $('#viewSel').onchange=ev=>{ App.view=ev.target.value; renderBoards(currentMoveState()); };
+  $('#btnDemo').onclick=toggleDemo;
+  $('#btnResign').onclick=()=>{
+    showConfirm('Resign?','You will lose the game.',()=>resignOnline());
+  };
+  $('#btnDraw').onclick=()=>offerDraw();
+  $('#btnAcceptDraw').onclick=()=>answerDraw(true);
+  $('#btnDeclineDraw').onclick=()=>answerDraw(false);
+  $('#btnRematch').onclick=()=>{ showConfirm('Rematch?','Start a new game. Seat colors alternate each rematch.',()=>rematch()); };
+  $('#btnLeaveGame').onclick=()=>{ showConfirm('Leave game?','Return to the lobby.',()=>leaveGame()); };
+  document.querySelectorAll('.layer-btn').forEach(b=> b.onclick=()=> setActiveLevel(+b.dataset.level));
+  document.querySelectorAll('.layout-btn').forEach(b=> b.onclick=()=> setLayout(b.dataset.layout));
+  document.addEventListener('keydown',ev=>{
+    const t=ev.target;
+    if(t && (t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable)) return;
+    if(ev.key==='1') setActiveLevel(1);
+    else if(ev.key==='2') setActiveLevel(2);
+    else if(ev.key==='3') setActiveLevel(3);
+  });
+  $('#boardsContainer').addEventListener('click',ev=>{
+    const headBtn=ev.target.closest('.board-head-btn');
+    if(headBtn){ setActiveLevel(+headBtn.dataset.level); return; }
+    const sq=ev.target.closest('.sq'); if(!sq) return;
+    const level=+sq.dataset.level;
+    if(App.boardLayout==='focus' && level!==App.activeLevel){ setActiveLevel(level); return; }
+    onSquareClick(level,+sq.dataset.file,+sq.dataset.rank);
+  });
+  $('#boardsContainer').addEventListener('keydown',ev=>{
+    const sq=ev.target.closest('.sq'); if(!sq) return;
+    if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); onSquareClick(+sq.dataset.level,+sq.dataset.file,+sq.dataset.rank); }
+    if(ev.key==='Escape') clearSelection();
+  });
+  document.addEventListener('click',ev=>{ if(!ev.target.closest('#boardsContainer') && !ev.target.closest('.piece-entry') && !ev.target.closest('#btnDemo') && !ev.target.closest('#summaryCards') && !ev.target.closest('#boardControls') && !ev.target.closest('#selectedCard')) { if(App.selectedId||App.inspectingId) clearSelection(); } });
+  $('#confirmYes').onclick=()=>{ const d=$('#confirmDialog'); const cb=d._onYes; d._onYes=null; d.close(); if(cb) cb(); };
+  $('#confirmNo').onclick=()=>{ const d=$('#confirmDialog'); d._onYes=null; d.close(); };
+  $('#infoOk').onclick=()=>{ $('#infoDialog').close(); };
+
+  $('#profileBtn').onclick=()=>openProfile();
+  $('#profileClose').onclick=()=>{ $('#profileDialog').close(); };
+  $('#authCancel').onclick=()=>{ $('#profileDialog').close(); };
+  $('#tabSignIn').onclick=()=>setAuthMode('login');
+  $('#tabRegister').onclick=()=>setAuthMode('register');
+  $('#authForm').onsubmit=(ev)=>{ ev.preventDefault(); void submitAuth(); };
+  $('#changePwForm').onsubmit=(ev)=>{ ev.preventDefault(); void submitChangePassword(); };
+  $('#logoutBtn').onclick=()=>{ showConfirm('Sign out?','You will return to the sign-in screen.',()=>void doLogout()); };
+  $('#histPrev').onclick=()=>{ if(App.historyPage>1) void loadProfileHistory(App.historyPage-1); };
+  $('#histNext').onclick=()=>{ const pages=Math.max(1,Math.ceil(App.historyTotal/App.historyPageSize)); if(App.historyPage<pages) void loadProfileHistory(App.historyPage+1); };
+  $('#profileDialog').addEventListener('close',()=>{});
+}
+
+function runDomTests(){
+  const out=[];
+  const _origStored=(typeof localStorage!=='undefined'?localStorage.getItem(LAYOUT_STORAGE_KEY):null);
+  const _origMode=App.boardLayout;
+  try{
+    const boards=document.querySelectorAll('#boardsContainer .board-grid');
+    out.push({n:'three boards',pass:boards.length===3,err:boards.length+''});
+    let total=0; let allSqs=true;
+    document.querySelectorAll('#boardsContainer .board-grid').forEach(b=>{ const sqs=b.querySelectorAll('.sq'); if(sqs.length!==96){ allSqs=false; out.push({n:'96 squares',pass:false,err:sqs.length+''}); } total+=sqs.length; });
+    out.push({n:'96 squares each',pass:allSqs&&total===288,err:total+''});
+    let uniqEach=true;
+    document.querySelectorAll('#boardsContainer .board-grid').forEach(b=>{ const s=new Set(); b.querySelectorAll('.sq').forEach(sq=>s.add(sq.dataset.file+sq.dataset.rank)); if(s.size!==96) uniqEach=false; });
+    out.push({n:'unique squares/board',pass:uniqEach,err:''});
+    const set=new Set(); document.querySelectorAll('.sq').forEach(s=>set.add(s.dataset.level+s.dataset.file+s.dataset.rank));
+    out.push({n:'unique coords',pass:set.size===288,err:set.size+''});
+    let allLabels=true; document.querySelectorAll('.sq').forEach(s=>{ if(!s.getAttribute('aria-label')) allLabels=false; });
+    out.push({n:'aria labels',pass:allLabels});
+    const types=Object.keys(TYPE_ABBR); let allEntries=true; types.forEach(t=>{ if(!document.querySelector('.piece-entry[data-type="'+t+'"]')) allEntries=false; });
+    out.push({n:'piece guide entries',pass:allEntries});
+    const cards=document.querySelectorAll('#pieceGuide .piece-entry.pcard');
+    out.push({n:'guide: 15 unique cards',pass:cards.length===15,err:cards.length+''});
+    const uniqTypes=new Set(); cards.forEach(c=>uniqTypes.add(c.dataset.type));
+    out.push({n:'guide: 15 distinct types',pass:uniqTypes.size===15,err:uniqTypes.size+''});
+    out.push({n:'guide: Y/M/C/MC legend present',pass:!!document.querySelector('#pieceGuide .pdiag-legend'),err:''});
+    const wCard=document.querySelector('.piece-entry[data-type="warrior"]');
+    const wM = wCard ? wCard.querySelectorAll('.psq.mk-m .mk-txt').length : -1;
+    const wC = wCard ? wCard.querySelectorAll('.psq.mk-c .mk-txt').length : -1;
+    out.push({n:'warrior: forward M marker',pass:wM>0,err:wM+''});
+    out.push({n:'warrior: diagonal C marker',pass:wC>0,err:wC+''});
+    const dCard=document.querySelector('.piece-entry[data-type="dragon"]');
+    const dCap = dCard ? dCard.querySelectorAll('.psq.mk-c .mk-txt').length : -1;
+    out.push({n:'dragon: remote-capture C markers',pass:dCap>0,err:dCap+''});
+    let markerLabels=true; document.querySelectorAll('#pieceGuide .psq.mk').forEach(s=>{ if(!s.getAttribute('aria-label')) markerLabels=false; });
+    out.push({n:'guide: markers have aria-labels',pass:markerLabels});
+    const ids=new Set(); let dup=false; document.querySelectorAll('[id]').forEach(e=>{ if(ids.has(e.id)) dup=true; ids.add(e.id); });
+    out.push({n:'no dup ids',pass:!dup});
+
+    const cont=$('#boardsContainer');
+    const focusActive=cont.querySelectorAll('.board-wrap.active-board').length;
+    const focusPreview=cont.querySelectorAll('.board-wrap.preview-board').length;
+    out.push({n:'focus: one active',pass:focusActive===1,err:focusActive+''});
+    out.push({n:'focus: two previews',pass:focusPreview===2,err:focusPreview+''});
+    out.push({n:'focus-layout class',pass:cont.classList.contains('focus-layout'),err:''});
+
+    const prevLayout=App.boardLayout;
+    setLayout('all');
+    const allActive=cont.querySelectorAll('.board-wrap.active-board').length;
+    const allPreview=cont.querySelectorAll('.board-wrap.preview-board').length;
+    out.push({n:'all: no active flag',pass:allActive===0,err:allActive+''});
+    out.push({n:'all: no preview flag',pass:allPreview===0,err:allPreview+''});
+    out.push({n:'all-layout class',pass:cont.classList.contains('all-layout'),err:''});
+    out.push({n:'all: three wraps',pass:cont.querySelectorAll('.board-wrap').length===3,err:cont.querySelectorAll('.board-wrap').length+''});
+    setLayout(prevLayout);
+
+    const s0=currentMoveState();
+    let wId=null; for(const id in s0.pieces){ if(s0.pieces[id].type==='warrior'&&s0.pieces[id].color==='gold'){ wId=id; break; } }
+    selectPiece(wId);
+    const selBefore=App.selectedId;
+    setActiveLevel(3);
+    out.push({n:'switch keeps selection',pass:App.selectedId===selBefore,err:App.selectedId+' vs '+selBefore});
+    setActiveLevel(2,{silent:true});
+
+    const cs=emptyState('gold');
+    addP(cs,'h','gold','hero',2,5,3);
+    addP(cs,'k','scarlet','king',2,1,7);
+    const badgeOn=l=>{ const w=document.querySelector('.board-wrap[data-level="'+l+'"]'); return !!(w && w.querySelector('.cross-badge')); };
+
+    App.localState=cs; App.selectedId=null; App.legal=[]; App.activeLevel=2;
+    renderBoards(cs);
+    selectPiece('h');
+    out.push({n:'cross: same-layer moves exist (L2)',pass:App.legal.some(m=>m.to.level===2),err:''});
+    out.push({n:'cross: upper moves exist (L3)',pass:App.legal.some(m=>m.to.level===3),err:''});
+    out.push({n:'cross: lower moves exist (L1)',pass:App.legal.some(m=>m.to.level===1),err:''});
+    out.push({n:'cross: no badge on origin L2 (active=2)',pass:!badgeOn(2),err:''});
+    out.push({n:'cross: badge on L3 (active=2)',pass:badgeOn(3),err:''});
+    out.push({n:'cross: badge on L1 (active=2)',pass:badgeOn(1),err:''});
+
+    setActiveLevel(3,{silent:true});
+    out.push({n:'cross: selection preserved after switch',pass:App.selectedId==='h',err:String(App.selectedId)});
+    out.push({n:'cross: no badge on origin L2 (active=3)',pass:!badgeOn(2),err:''});
+    out.push({n:'cross: badge on L3 Middle->Upper (active=3)',pass:badgeOn(3),err:''});
+    out.push({n:'cross: badge on L1 Middle->Lower (active=3)',pass:badgeOn(1),err:''});
+    const activeBadge=document.querySelector('.board-wrap.active-board .cross-badge');
+    out.push({n:'cross: active board badged as destination',pass:!!activeBadge,err:''});
+
+    App.activeLevel=3; App.selectedId=null; App.legal=[];
+    renderBoards(cs);
+    const hWrapBefore=document.querySelector('.board-wrap[data-level="2"]');
+    out.push({n:'cross: hero board is preview',pass:hWrapBefore.classList.contains('preview-board'),err:''});
+    selectPiece('h');
+    out.push({n:'cross(from preview): no badge on origin L2',pass:!badgeOn(2),err:''});
+    out.push({n:'cross(from preview): badge on L3',pass:badgeOn(3),err:''});
+    out.push({n:'cross(from preview): badge on L1',pass:badgeOn(1),err:''});
+
+    clearSelection();
+    out.push({n:'cross: cleared on cancel',pass:document.querySelectorAll('.board-wrap .cross-badge').length===0,err:''});
+
+    App.localState=createInitialState(); App.activeLevel=2; App.selectedId=null; App.legal=[];
+    renderBoards(App.localState);
+    clearSelection();
+
+    {
+      const insState=createInitialState();
+      App.localState=insState; App.activeLevel=2; App.selectedId=null; App.legal=[];
+      App.inspectingId=null; App.inspectLegal=[];
+      renderBoards(insState); clearSelection();
+      let goldW=null, scarletW=null;
+      for(const id in insState.pieces){ const p=insState.pieces[id]; if(p.type==='warrior'){ if(p.color==='gold'&&!goldW) goldW=id; if(p.color==='scarlet'&&!scarletW) scarletW=id; } }
+
+      const selCalls=withScrollSpy(()=>selectPiece(goldW));
+      out.push({n:'scroll: select does not scroll',pass:selCalls.length===0,err:selCalls.length+''});
+      const selN=document.querySelectorAll('.sq.sel').length, insN=document.querySelectorAll('.sq.inspect').length;
+      out.push({n:'inspect: select uses sel not inspect',pass:selN>0&&insN===0,err:'sel='+selN+',inspect='+insN});
+      const card1=$('#selectedCard');
+      const btn1=card1.querySelector('.view-rules-btn');
+      out.push({n:'scroll: view-rules btn present',pass:!!btn1,err:''});
+      if(btn1){
+        const v=withScrollSpy(()=>btn1.click());
+        out.push({n:'scroll: view-rules scrolls once',pass:v.length===1,err:v.length+''});
+      }
+
+      const insCalls=withScrollSpy(()=>inspectPiece(scarletW));
+      out.push({n:'scroll: inspect does not scroll',pass:insCalls.length===0,err:insCalls.length+''});
+      out.push({n:'inspect: inspectingId set',pass:App.inspectingId===scarletW,err:String(App.inspectingId)});
+      out.push({n:'inspect: selectedId cleared',pass:App.selectedId===null,err:String(App.selectedId)});
+      const sp=insState.pieces[scarletW];
+      const originSq=squareEl(sp.level,sp.file,sp.rank);
+      out.push({n:'inspect: origin .inspect class',pass:!!originSq&&originSq.classList.contains('inspect'),err:''});
+      out.push({n:'inspect: target highlighted (dashed)',pass:document.querySelectorAll('.sq.ilegal,.sq.icap,.sq.icross,.sq.iremote').length>0,err:''});
+      out.push({n:'inspect: ilegal present for warrior',pass:document.querySelectorAll('.sq.ilegal').length>0,err:''});
+      out.push({n:'inspect: turn unchanged',pass:insState.turn==='gold',err:insState.turn});
+      out.push({n:'inspect: version unchanged',pass:insState.version===0,err:String(insState.version)});
+      out.push({n:'inspect: history unchanged',pass:insState.moveHistory.length===0,err:String(insState.moveHistory.length)});
+      selectPiece(goldW);
+      out.push({n:'inspect: select cancels inspection',pass:App.inspectingId===null,err:String(App.inspectingId)});
+      inspectPiece(scarletW);
+      const anySq=document.querySelector('.sq');
+      anySq.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+      out.push({n:'inspect: Escape clears inspection',pass:App.inspectingId===null,err:String(App.inspectingId)});
+      const legend=$('#legendGrid');
+      out.push({n:'inspect: legend .inspect',pass:!!legend.querySelector('.sw.inspect'),err:''});
+      out.push({n:'inspect: legend .icap',pass:!!legend.querySelector('.sw.icap'),err:''});
+      out.push({n:'inspect: legend .iremote',pass:!!legend.querySelector('.sw.iremote'),err:''});
+
+      setLayout('all');
+      const layCalls=withScrollSpy(()=>setActiveLevel(3));
+      out.push({n:'scroll: layer switch no scroll',pass:layCalls.length===0,err:layCalls.length+''});
+      setLayout('focus');
+      App.activeLevel=2;
+      refreshBoardMode();
+
+      App.localState=createInitialState(); App.activeLevel=2; App.selectedId=null; App.legal=[];
+      App.inspectingId=null; App.inspectLegal=[];
+      renderBoards(App.localState); clearSelection();
+    }
+
+    App.activeLevel=2;
+    postMoveLevelSwitch({kind:'move',from:{level:2,file:0,rank:1},to:{level:3,file:1,rank:2}});
+    out.push({n:'cross move switches level',pass:App.activeLevel===3,err:String(App.activeLevel)});
+    postMoveLevelSwitch({kind:'remoteCapture',from:{level:3,file:6,rank:0},to:{level:2,file:6,rank:1}});
+    out.push({n:'remote keeps level',pass:App.activeLevel===3,err:String(App.activeLevel)});
+    App.activeLevel=2;
+    refreshBoardMode();
+
+    let previewTabbed=false;
+    document.querySelectorAll('.board-wrap.preview-board .sq').forEach(sq=>{ if(sq.tabIndex>=0) previewTabbed=true; });
+    out.push({n:'preview squares untabbed',pass:!previewTabbed,err:''});
+    let activeTabbed=true;
+    document.querySelectorAll('.board-wrap.active-board .sq').forEach(sq=>{ if(sq.tabIndex!==0) activeTabbed=false; });
+    out.push({n:'active squares tabbed',pass:activeTabbed,err:''});
+
+    const originalStoredValue=(typeof localStorage!=='undefined'?localStorage.getItem(LAYOUT_STORAGE_KEY):null);
+    const originalLayoutMode=App.boardLayout;
+    try{
+      setLayout('all');
+      out.push({n:'layout: applies all',pass:App.boardLayout==='all' && localStorage.getItem(LAYOUT_STORAGE_KEY)==='all',err:String(App.boardLayout)});
+      setLayout('focus');
+      out.push({n:'layout: applies focus',pass:App.boardLayout==='focus' && localStorage.getItem(LAYOUT_STORAGE_KEY)==='focus',err:String(App.boardLayout)});
+      const beforeBogus=App.boardLayout;
+      setLayout('bogus');
+      out.push({n:'layout: rejects invalid',pass:App.boardLayout===beforeBogus,err:String(App.boardLayout)});
+    }finally{
+      if(originalStoredValue===null){ try{ localStorage.removeItem(LAYOUT_STORAGE_KEY); }catch(e){} }
+      else { try{ localStorage.setItem(LAYOUT_STORAGE_KEY,originalStoredValue); }catch(e){} }
+      App.boardLayout=originalLayoutMode;
+      refreshBoardMode();
+      applyHighlights(currentMoveState());
+    }
+    out.push({n:'layout: restored after test',pass:App.boardLayout===originalLayoutMode,err:String(App.boardLayout)});
+
+    const openBtns=document.querySelectorAll('.board-wrap.preview-board .board-head-btn');
+    let labelsOk=true; openBtns.forEach(b=>{ if(!/Open/.test(b.getAttribute('aria-label')||'')) labelsOk=false; });
+    out.push({n:'preview open buttons',pass:openBtns.length===2&&labelsOk,err:openBtns.length+''});
+
+    function hasResponsiveBreakpoint(...widths){
+      for(const sheet of document.styleSheets){
+        try{
+          for(const rule of sheet.cssRules||[]){
+            const mediaText = rule.media?.mediaText || rule.conditionText || '';
+            const normalized = mediaText.replace(/\s+/g,'').toLowerCase();
+            if(widths.some(width => normalized.includes('(max-width:'+width+'px)'))){
+              return true;
+            }
+          }
+        }catch(error){
+          // cross-origin sheets throw on cssRules
+        }
+      }
+      return false;
+    }
+    const mq1199=hasResponsiveBreakpoint(1199,1200);
+    const mq699=hasResponsiveBreakpoint(699,700);
+    out.push({n:'responsive: 1200 mq',pass:mq1199,err:mq1199?'':'Missing 1199px/1200px media query'});
+    out.push({n:'responsive: 700 mq',pass:mq699,err:mq699?'':'Missing 699px/700px media query'});
+    const cg=getComputedStyle(document.querySelector('.col-game'));
+    out.push({n:'col-game min-width 0',pass:cg.minWidth==='0px'||cg.minWidth==='0',err:cg.minWidth});
+    const shrinkEls=document.querySelectorAll('#boardsContainer .board-grid, #boardsContainer .board-wrap');
+    let shrinkOk=true;
+    shrinkEls.forEach(g=>{ const cs2=getComputedStyle(g); if(!(cs2.minWidth==='0px'||cs2.minWidth==='0')) shrinkOk=false; });
+    out.push({n:'boards shrinkable (min-width 0)',pass:shrinkOk,err:''});
+    const pBtn=$('#profileBtn');
+    out.push({n:'profile: header button',pass:!!pBtn&&!!pBtn.getAttribute('aria-label'),err:pBtn?'':'missing'});
+    out.push({n:'profile: dialog markup',pass:!!$('#profileDialog')&&!!$('#profileAuth')&&!!$('#profileAccount'),err:''});
+    const authUser=$('#authUser'), authPass=$('#authPass');
+    out.push({n:'profile: fields labelled',pass:!!document.querySelector('label[for="authUser"]')&&!!document.querySelector('label[for="authPass"]'),err:''});
+    out.push({n:'profile: autocomplete attrs',pass:authUser.getAttribute('autocomplete')==='username'&&authPass.getAttribute('autocomplete')==='current-password',err:authPass.getAttribute('autocomplete')||''});
+    const errEl=$('#profileErr');
+    out.push({n:'profile: live error region',pass:!!errEl&&(errEl.getAttribute('role')==='alert'||errEl.getAttribute('aria-live')==='polite'),err:''});
+    const tabList=document.querySelector('.profile-tabs[role="tablist"]');
+    out.push({n:'profile: tablist role',pass:!!tabList&&$('#tabSignIn').getAttribute('role')==='tab'&&$('#tabRegister').getAttribute('role')==='tab',err:''});
+
+    const _origProfile=App.profile, _origAuthMode=App.authMode, _origHist=App.history, _origHistPage=App.historyPage, _origHistTotal=App.historyTotal;
+    try{
+      App.profile=null;
+      openProfile();
+      out.push({n:'profile: logged-out shows auth form',pass:!$('#profileAuth').classList.contains('hidden')&&$('#profileAccount').classList.contains('hidden'),err:''});
+      $('#profileDialog').close();
+      setAuthMode('register');
+      out.push({n:'profile: register tab selected',pass:$('#tabRegister').getAttribute('aria-selected')==='true'&&$('#tabSignIn').getAttribute('aria-selected')==='false',err:''});
+      out.push({n:'profile: register submit label',pass:$('#authSubmit').textContent==='Register'&&$('#authPass').getAttribute('autocomplete')==='new-password',err:$('#authSubmit').textContent+''});
+      setAuthMode('login');
+      out.push({n:'profile: login submit label',pass:$('#authSubmit').textContent==='Sign in'&&$('#authPass').getAttribute('autocomplete')==='current-password',err:$('#authSubmit').textContent+''});
+
+      App.profile={id:42,username:'TestPlayer',rating:1016,gamesPlayed:5,wins:3,draws:1,losses:1};
+      renderProfileAccount();
+      out.push({n:'profile: account view shown',pass:!$('#profileAccount').classList.contains('hidden')&&$('#profileAuth').classList.contains('hidden'),err:''});
+      out.push({n:'profile: renders username',pass:$('#profileName').textContent==='TestPlayer',err:$('#profileName').textContent+''});
+      out.push({n:'profile: renders elo',pass:$('#profRating').textContent==='1016',err:$('#profRating').textContent+''});
+      out.push({n:'profile: renders wdl',pass:$('#profWins').textContent==='W 3'&&$('#profDraws').textContent==='D 1'&&$('#profLosses').textContent==='L 1',err:$('#profWins').textContent+'/'+$('#profDraws').textContent+'/'+$('#profLosses').textContent});
+      setProfile(App.profile);
+      out.push({n:'profile: header shows username',pass:pBtn.textContent==='TestPlayer',err:pBtn.textContent+''});
+      out.push({n:'profile: hides auth gate when signed in',pass:$('#authGate').classList.contains('hidden'),err:$('#authGate').className});
+      setProfile(null);
+      out.push({n:'profile: guest header',pass:pBtn.textContent==='Sign in',err:pBtn.textContent+''});
+      out.push({n:'profile: shows auth gate when signed out',pass:!$('#authGate').classList.contains('hidden'),err:$('#authGate').className});
+
+      App.profile={id:42,username:'TestPlayer',rating:1016,gamesPlayed:5,wins:3,draws:1,losses:1};
+      renderProfileAccount();
+      $('#profileDialog').showModal();
+      $('#profileDetail').classList.add('hidden');
+      $('#profileAccount').classList.remove('hidden');
+      applyProfileRefresh({id:42,username:'TestPlayer',rating:1032,gamesPlayed:6,wins:4,draws:1,losses:1});
+      out.push({n:'profile: refresh updates elo',pass:$('#profRating').textContent==='1032'&&$('#profGames').textContent==='6',err:$('#profRating').textContent+'/'+$('#profGames').textContent});
+      applyProfileRefresh({id:999,username:'Other',rating:5000,gamesPlayed:0,wins:0,draws:0,losses:0});
+      out.push({n:'profile: refresh ignores other account',pass:$('#profRating').textContent==='1032',err:$('#profRating').textContent+''});
+      $('#profileDialog').close();
+
+      const mb=el('div','',''); mb.id='__mbtest';
+      document.body.appendChild(mb);
+      const fs={pieces:{ a:{id:'a',color:'gold',type:'king',level:2,file:0,rank:0}, b:{id:'b',color:'scarlet',type:'warrior',level:1,file:5,rank:7} }};
+      renderFinalBoard(mb,fs);
+      out.push({n:'profile: final board 3 levels',pass:mb.querySelectorAll('.miniboard').length===3,err:mb.querySelectorAll('.miniboard').length+''});
+      out.push({n:'profile: final board pieces',pass:mb.querySelectorAll('.miniboard .tok').length===2,err:mb.querySelectorAll('.miniboard .tok').length+''});
+      mb.remove();
+
+      App.historyTotal=25; App.historyPageSize=10;
+      App.history=[];
+      for(let i=0;i<10;i++) App.history.push({gameId:100+i,opponentName:'Opp'+i,opponentIsGuest:i%2===0,colour:'gold',result:i%3===0?'draw':(i%3===1?'win':'loss'),resultReason:'checkmate',rated:i%2===0,ratingBefore:1000,ratingAfter:1016,ratingChange:16,startedAt:0,completedAt:1700000000000,moveCount:20+i});
+      renderProfileHistory();
+      out.push({n:'profile: history list items',pass:$('#histList').querySelectorAll('.hist-item').length===10,err:$('#histList').querySelectorAll('.hist-item').length+''});
+      out.push({n:'profile: pager shows on multi-page',pass:!$('#histPager').classList.contains('hidden')&&/Page 1 of 3/.test($('#histPageInfo').textContent),err:$('#histPageInfo').textContent+''});
+      App.historyTotal=3;
+      renderProfileHistory();
+      out.push({n:'profile: pager hidden single page',pass:$('#histPager').classList.contains('hidden'),err:''});
+      App.history=[]; App.historyTotal=0;
+      renderProfileHistory();
+      out.push({n:'profile: empty history notice',pass:!!$('#histList').querySelector('.hist-empty'),err:''});
+
+      $('#profileDialog').close();
+    }catch(pe){ out.push({n:'profile: suite',pass:false,err:String(pe)}); }
+    finally{
+      App.profile=_origProfile; App.authMode=_origAuthMode; App.history=_origHist; App.historyPage=_origHistPage; App.historyTotal=_origHistTotal;
+      setProfile(_origProfile);
+      try{ $('#profileDialog').close(); }catch(e){}
+      try{ $('#profileAccount').classList.add('hidden'); }catch(e){}
+      try{ $('#profileAuth').classList.remove('hidden'); }catch(e){}
+    }
+
+    try{
+      const _seat=App.seat, _lms=App.lastMoveStr;
+      App.seat='gold'; App.lastMoveStr='Anna (Gold) - Ground - Warrior - B2 - B3';
+      const pub={
+        status:'active', turn:'gold', rated:true, rematchCount:0, drawOfferBy:null, winner:null, resultReason:null, version:1, halfMove:1, code:'ABC123', schemaVersion:1,
+        players:{
+          gold:{userId:'1',username:'Anna',rating:1200,wins:3,draws:1,losses:2,connected:true},
+          scarlet:{userId:'2',username:'Bo',rating:1100,wins:1,draws:0,losses:4,connected:false}
+        },
+        pieces:(App.localState&&App.localState.pieces)||{},
+      };
+      renderMatchPanel(pub);
+      const gold=$('#mpGold'), scarlet=$('#mpScarlet');
+      out.push({n:'cards: gold role badge',pass:!!gold.querySelector('.mp-role.gold'),err:''});
+      out.push({n:'cards: scarlet role badge',pass:!!scarlet.querySelector('.mp-role.scarlet'),err:''});
+      out.push({n:'cards: You on own card',pass:!!gold.querySelector('.mp-you')&&!scarlet.querySelector('.mp-you'),err:''});
+      out.push({n:'cards: record shown',pass:/3W · 2L/.test(gold.querySelector('.mp-record').textContent),err:gold.querySelector('.mp-record')?gold.querySelector('.mp-record').textContent:''});
+      const active=document.querySelectorAll('#matchPanel .mp-side.is-active-turn');
+      out.push({n:'turn: exactly one active card',pass:active.length===1,err:active.length+''});
+      out.push({n:'turn: active is gold',pass:gold.classList.contains('is-active-turn')&&!scarlet.classList.contains('is-active-turn'),err:''});
+      out.push({n:'turn: aria-current on active',pass:gold.getAttribute('aria-current')==='true',err:gold.getAttribute('aria-current')+''});
+      out.push({n:'turn: "Your turn" on own card',pass:/Your turn/.test(gold.textContent),err:''});
+      pub.status='finished'; pub.turn=null; pub.winner='gold';
+      renderMatchPanel(pub);
+      out.push({n:'turn: no active card when finished',pass:document.querySelectorAll('#matchPanel .mp-side.is-active-turn').length===0,err:''});
+      App.seat=_seat; App.lastMoveStr=_lms;
+    }catch(te){ out.push({n:'cards/turn suite',pass:false,err:String(te)}); }
+
+    const horizontalOverflow =
+      document.documentElement.scrollWidth > window.innerWidth + 1 ||
+      document.body.scrollWidth > window.innerWidth + 1;
+    out.push({n:'no horizontal overflow',pass:!horizontalOverflow,err:'viewport='+window.innerWidth+'px, document='+document.documentElement.scrollWidth+'px'});
+
+    let cssText=''; try{ for(const ss of Array.from(document.styleSheets)){ for(const r of Array.from(ss.cssRules||[])){ cssText+=r.cssText+'\n'; } } }catch(e){}
+    out.push({n:'responsive: guide grid class applied',pass:$('#pieceGuide').classList.contains('grid'),err:''});
+    out.push({n:'responsive: 5-col desktop rule',pass:/#pieceGuide\.grid\s*\{[^}]*repeat\(\s*5/.test(cssText),err:''});
+    out.push({n:'responsive: 3-col breakpoint',pass:/max-width:\s*1000px/.test(cssText)&&/repeat\(\s*3/.test(cssText),err:''});
+    out.push({n:'responsive: 2-col breakpoint',pass:/max-width:\s*699px/.test(cssText)&&/repeat\(\s*2/.test(cssText),err:''});
+    out.push({n:'responsive: 1-col breakpoint',pass:/max-width:\s*480px/.test(cssText)&&/#pieceGuide\.grid\s*\{[^}]*grid-template-columns:\s*1fr/.test(cssText),err:''});
+  }catch(e){ out.push({n:'dom',pass:false,err:String(e)}); }
+  finally{
+    if(_origStored===null){ try{ localStorage.removeItem(LAYOUT_STORAGE_KEY); }catch(e){} }
+    else { try{ localStorage.setItem(LAYOUT_STORAGE_KEY,_origStored); }catch(e){} }
+    App.boardLayout=_origMode;
+    refreshBoardMode();
+    applyHighlights(currentMoveState());
+  }
+  return out;
+}
+
+async function boot(){
+  mark('dc-shell-start');
+  buildLegend(); buildPieceGuide(); wire();
+  App.localState=createInitialState();
+  try{ const saved=localStorage.getItem(LAYOUT_STORAGE_KEY); if(saved==='focus'||saved==='all') App.boardLayout=saved; }catch(e){}
+  App.activeLevel=2;
+  document.querySelectorAll('.layout-btn').forEach(b=> b.setAttribute('aria-pressed', b.dataset.layout===App.boardLayout?'true':'false'));
+  renderBoards(App.localState);
+  applyAuthGate();
+  mark('dc-shell-end'); measure('dc-shell','dc-shell-start','dc-shell-end');
+
+  if(DEBUG){ runSelfTests(); }
+
+  mark('dc-auth-start');
+  restoreSession().then(()=>{ mark('dc-auth-end'); measure('dc-auth','dc-auth-start','dc-auth-end'); App.bootAuth=true; afterBootReady(); })
+    .catch(()=>{ App.bootAuth=true; afterBootReady(); });
+  mark('dc-socket-start');
+  const sockOk=initSocket();
+  if(!sockOk){
+    App.bootSocketReady=true;
+  }
+  setTimeout(()=>{ App.bootSocketReady=true; afterBootReady(); }, 3000);
+}
+
+function runSelfTests(){
+  const ruleRes=runRuleTests();
+  let pass=0,fail=0; const failList=[];
+  for(const r of ruleRes){ if(r.pass)pass++; else { fail++; failList.push(r.n+': '+r.err); } }
+  const domRes=runDomTests();
+  for(const r of domRes){ if(r.pass)pass++; else { fail++; failList.push(r.n+': '+r.err); } }
+  console.log('%cDragonchess tests','font-weight:bold');
+  console.table(ruleRes.concat(domRes).map(r=>({test:r.n,pass:r.pass?'PASS':'FAIL',err:r.err||''})));
+  const diag=$('#diagBox');
+  if(diag){
+    let html='<table class="test-table"><tbody>';
+    for(const r of ruleRes.concat(domRes)) html+='<tr class="'+(r.pass?'pass':'fail')+'"><td>'+(r.pass?'✓':'✗')+'</td><td>'+r.n+'</td><td>'+(r.err||'')+'</td></tr>';
+    html+='</tbody></table><p class="note">'+pass+' passed, '+fail+' failed.</p>';
+    diag.innerHTML=html;
+  }
+  $('#diagWrap').hidden=false;
+  if(fail) console.error('Test failures:',failList);
+}
+
+function afterBootReady(){
+  if(!(App.bootAuth && App.bootSocketReady)) return;
+  if(App.booted) return;
+  App.booted=true;
+  mark('dc-interactive');
+  measure('dc-interactive','dc-shell-start','dc-interactive');
+  if(App.connected && App.socket) tryResume();
+  if(!App.socket){ announce('Multiplayer server unavailable. Reconnecting…'); }
+  else if(!App.profile && !App.code){ announce('Online ready. Sign in, then host, join, or find a match.'); }
+}
+boot();
+</script>
+</body>
+</html>

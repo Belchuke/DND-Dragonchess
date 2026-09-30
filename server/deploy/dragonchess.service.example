@@ -1,0 +1,37 @@
+# Copy to /etc/systemd/system/dragonchess.service and adjust User/Group. Don't run as root.
+
+[Unit]
+Description=Dragonchess multiplayer server (Socket.IO, authoritative)
+After=network.target
+
+[Service]
+Type=simple
+
+# sudo useradd --system --no-create-home --shell /usr/sbin/nologin dragonchess
+User=dragonchess
+Group=dragonchess
+
+WorkingDirectory=/opt/dragonchess-server
+
+Environment=HOST=127.0.0.1
+Environment=PORT=3543
+Environment=NODE_ENV=production
+Environment=DATABASE_PATH=/var/lib/dragonchess/dragonchess.sqlite
+Environment=BCRYPT_COST=12
+
+# Should contain PASSWORD_PEPPER=<base64 of 32 random bytes>. Required in production.
+EnvironmentFile=/etc/dragonchess/secrets.env
+
+ExecStart=/usr/bin/node dist/src/server.js
+
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/dragonchess
+
+[Install]
+WantedBy=multi-user.target

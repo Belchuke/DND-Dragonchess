@@ -1,0 +1,38 @@
+services:
+  dragonchess:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+      args:
+        NODE_VERSION: "20"
+    image: dragonchess-server:latest
+    container_name: dragonchess
+    ports:
+      - "127.0.0.1:3543:3543"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=3543
+      - NODE_ENV=production
+      - DATABASE_PATH=/var/lib/dragonchess/dragonchess.sqlite
+      - BCRYPT_COST=12
+      - PUBLIC_DIR=/app/public
+      # required in production; changing it invalidates every password
+      - PASSWORD_PEPPER=gXSFU5Nd8AxdmrWa
+    volumes:
+      - dragonchess_data:/var/lib/dragonchess
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3543/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  dragonchess_data:
