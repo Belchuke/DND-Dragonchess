@@ -23,11 +23,11 @@ The rules come from **Gary Gygax's _Dragonchess_**, first published in _Dragon_ 
 
 The game is played on three stacked 12×8 boards:
 
-| Level | Realm | Some of the pieces there |
-|---|---|---|
-| 3 | Sky | Sylph, Griffon, Dragon |
-| 2 | Ground | King, Mage, Paladin, Cleric, Hero, Thief, Unicorn, Oliphant, Warrior |
-| 1 | Underworld | Dwarf, Basilisk, Elemental |
+| Level | Realm      | Some of the pieces there                                             |
+| ----- | ---------- | -------------------------------------------------------------------- |
+| 3     | Sky        | Sylph, Griffon, Dragon                                               |
+| 2     | Ground     | King, Mage, Paladin, Cleric, Hero, Thief, Unicorn, Oliphant, Warrior |
+| 1     | Underworld | Dwarf, Basilisk, Elemental                                           |
 
 Pieces move within their own level, and many can also move between levels. Gold moves first, and you win by checkmating the enemy King. A few special rules:
 
@@ -80,12 +80,6 @@ Or with Docker:
 docker compose up --build
 curl http://127.0.0.1:3543/health   # {"status":"ok"}
 ```
-
-## Self-hosting
-
-See [`instructions.md`](instructions.md) for a step-by-step guide to deploying on Ubuntu with Nginx and HTTPS, using systemd or Docker. See [`server/README.md`](server/README.md) for the full server reference: API, Socket.IO events, configuration and admin tools.
-
-In production you must set `PASSWORD_PEPPER` to a secret random value. Keep it out of the repository.
 
 ## Credits
 
